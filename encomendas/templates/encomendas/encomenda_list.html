@@ -1,0 +1,297 @@
+{% extends 'encomendas/base.html' %}
+
+{% block title %}Encomendas - Sistema de Encomendas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1><i class="bi bi-clipboard-data me-3"></i>Encomendas</h1>
+            <p class="mb-0">Gerencie todas as encomendas da Drogaria Benfica</p>
+        </div>
+        <a href="{% url 'encomenda_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Nova Encomenda
+        </a>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-control">
+                    <option value="">Todos os status</option>
+                    {% for status_code, status_name in status_choices %}
+                    <option value="{{ status_code }}" {% if status_code == current_status %}selected{% endif %}>
+                        {{ status_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-3">
+                <label class="form-label">Cliente</label>
+                <select name="cliente" class="form-control">
+                    <option value="">Todos os clientes</option>
+                    {% for cliente in clientes %}
+                    <option value="{{ cliente.id }}" {% if cliente.id == current_cliente %}selected{% endif %}>
+                        {{ cliente.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label">Buscar</label>
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Número, cliente ou código..." 
+                       value="{{ current_search|default:'' }}">
+            </div>
+            
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search me-1"></i>Filtrar
+                </button>
+                <a href="{% url 'encomenda_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de Encomendas -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-list-ul me-2"></i>
+            {% if page_obj.paginator.count %}
+                {{ page_obj.paginator.count }} encomenda{{ page_obj.paginator.count|pluralize }}
+            {% else %}
+                Nenhuma encomenda encontrada
+            {% endif %}
+        </h5>
+        
+        {% if page_obj.has_other_pages %}
+        <small class="text-muted">
+            Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+        </small>
+        {% endif %}
+    </div>
+    
+    <div class="card-body p-0">
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Cliente</th>
+                            <th>Status</th>
+                            <th>Data Criação</th>
+                            <th>Responsável</th>
+                            <th>Valor Total</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for encomenda in page_obj %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'encomenda_detail' encomenda.pk %}" class="text-decoration-none">
+                                    <strong>#{{ encomenda.numero_encomenda }}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ encomenda.cliente.nome }}</strong><br>
+                                    <small class="text-muted">{{ encomenda.cliente.codigo }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ encomenda.status }}">
+                                    {{ encomenda.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div>
+                                    {{ encomenda.data_criacao|date:"d/m/Y" }}<br>
+                                    <small class="text-muted">{{ encomenda.data_criacao|time:"H:i" }}</small>
+                                </div>
+                            </td>
+                            <td>{{ encomenda.responsavel_criacao }}</td>
+                            <td>
+                                <strong>R$ {{ encomenda.valor_total|floatformat:2 }}</strong>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'encomenda_detail' encomenda.pk %}" 
+                                       class="btn btn-outline-primary" title="Ver Detalhes">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'encomenda_edit' encomenda.pk %}" 
+                                       class="btn btn-outline-secondary" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-info dropdown-toggle" 
+                                                type="button" data-bs-toggle="dropdown" title="Mais Ações">
+                                            <i class="bi bi-three-dots"></i>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            {% if not encomenda.entrega %}
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'entrega_create' encomenda.pk %}">
+                                                    <i class="bi bi-truck me-2"></i>Programar Entrega
+                                                </a>
+                                            </li>
+                                            {% else %}
+                                            <li>
+                                                <a class="dropdown-item" href="{% url 'entrega_edit' encomenda.entrega.pk %}">
+                                                    <i class="bi bi-truck me-2"></i>Editar Entrega
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <a class="dropdown-item text-danger" 
+                                                   href="{% url 'encomenda_delete' encomenda.pk %}">
+                                                    <i class="bi bi-trash me-2"></i>Excluir
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                                <h5 class="text-muted mt-3">Nenhuma encomenda encontrada</h5>
+                                <p class="text-muted">
+                                    {% if current_search or current_status or current_cliente %}
+                                        Tente ajustar os filtros ou 
+                                        <a href="{% url 'encomenda_list' %}">limpar a busca</a>
+                                    {% else %}
+                                        Comece criando sua primeira encomenda!
+                                    {% endif %}
+                                </p>
+                                <a href="{% url 'encomenda_create' %}" class="btn btn-primary">
+                                    <i class="bi bi-plus-circle me-2"></i>Nova Encomenda
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginação -->
+            {% if page_obj.has_other_pages %}
+            <div class="card-footer">
+                <nav aria-label="Navegação de páginas">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_status %}status={{ current_status }}&{% endif %}{% if current_cliente %}cliente={{ current_cliente }}&{% endif %}page=1">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_status %}status={{ current_status }}&{% endif %}{% if current_cliente %}cliente={{ current_cliente }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_status %}status={{ current_status }}&{% endif %}{% if current_cliente %}cliente={{ current_cliente }}&{% endif %}page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_status %}status={{ current_status }}&{% endif %}{% if current_cliente %}cliente={{ current_cliente }}&{% endif %}page={{ page_obj.next_page_number }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% if current_search %}search={{ current_search }}&{% endif %}{% if current_status %}status={{ current_status }}&{% endif %}{% if current_cliente %}cliente={{ current_cliente }}&{% endif %}page={{ page_obj.paginator.num_pages }}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<!-- Estatísticas Rápidas -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="bi bi-clipboard-data text-primary" style="font-size: 2rem;"></i>
+                <h5 class="mt-2">{{ page_obj.paginator.count }}</h5>
+                <p class="text-muted mb-0">Total</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="bi bi-clock-history text-warning" style="font-size: 2rem;"></i>
+                <h5 class="mt-2">
+                    {% with pendentes=page_obj.object_list|length %}
+                        {% if current_status == 'criada' or current_status == 'cotacao' or current_status == 'aprovada' or current_status == 'em_andamento' %}
+                            {{ pendentes }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    {% endwith %}
+                </h5>
+                <p class="text-muted mb-0">Pendentes</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
+                <h5 class="mt-2">
+                    {% if current_status == 'entregue' %}
+                        {{ page_obj.object_list|length }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </h5>
+                <p class="text-muted mb-0">Entregues</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="bi bi-currency-dollar text-info" style="font-size: 2rem;"></i>
+                <h5 class="mt-2">
+                    R$ {% widthratio page_obj.object_list|length 1 1000 %}K
+                </h5>
+                <p class="text-muted mb-0">Valor Aprox.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

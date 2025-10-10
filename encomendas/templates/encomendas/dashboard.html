@@ -1,0 +1,177 @@
+{% extends 'encomendas/base.html' %}
+
+{% block title %}Dashboard - Sistema de Encomendas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-speedometer2 me-3"></i>Dashboard</h1>
+    <p class="mb-0">Visão geral do sistema de encomendas da Drogaria Benfica</p>
+</div>
+
+<!-- Estatísticas -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h3 class="text-primary mb-1">{{ total_encomendas }}</h3>
+                        <p class="text-muted mb-0">Total de Encomendas</p>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-clipboard-data" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h3 class="text-warning mb-1">{{ encomendas_pendentes }}</h3>
+                        <p class="text-muted mb-0">Pendentes</p>
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-clock-history" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card stats-card h-100">
+            <div class="card-body text-center">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h3 class="text-success mb-1">{{ encomendas_entregues }}</h3>
+                        <p class="text-muted mb-0">Entregues</p>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-check-circle" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ações Rápidas -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'encomenda_create' %}" class="btn btn-primary w-100 py-3">
+                            <i class="bi bi-plus-circle me-2"></i>
+                            Nova Encomenda
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'cliente_create' %}" class="btn btn-success w-100 py-3">
+                            <i class="bi bi-person-plus me-2"></i>
+                            Novo Cliente
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'produto_create' %}" class="btn btn-info w-100 py-3">
+                            <i class="bi bi-box me-2"></i>
+                            Novo Produto
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'fornecedor_create' %}" class="btn btn-warning w-100 py-3">
+                            <i class="bi bi-truck me-2"></i>
+                            Novo Fornecedor
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Últimas Encomendas -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Últimas Encomendas</h5>
+                <a href="{% url 'encomenda_list' %}" class="btn btn-outline-light btn-sm">
+                    Ver Todas <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if ultimas_encomendas %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Número</th>
+                                    <th>Cliente</th>
+                                    <th>Status</th>
+                                    <th>Data</th>
+                                    <th>Valor</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for encomenda in ultimas_encomendas %}
+                                <tr>
+                                    <td>
+                                        <strong>#{{ encomenda.numero_encomenda }}</strong>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ encomenda.cliente.nome }}</strong><br>
+                                            <small class="text-muted">{{ encomenda.cliente.codigo }}</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-{{ encomenda.status }}">
+                                            {{ encomenda.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <small>{{ encomenda.data_criacao|date:"d/m/Y H:i" }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>R$ {{ encomenda.valor_total|floatformat:2 }}</strong>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'encomenda_detail' encomenda.pk %}" class="btn btn-outline-primary" title="Ver Detalhes">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <a href="{% url 'encomenda_edit' encomenda.pk %}" class="btn btn-outline-secondary" title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted mt-3">Nenhuma encomenda encontrada</h5>
+                        <p class="text-muted">Comece criando sua primeira encomenda!</p>
+                        <a href="{% url 'encomenda_create' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-2"></i>Nova Encomenda
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

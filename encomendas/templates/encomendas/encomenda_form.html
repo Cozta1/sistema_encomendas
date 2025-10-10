@@ -1,0 +1,470 @@
+{% extends 'encomendas/base.html' %}
+
+{% block title %}{{ title }} - Sistema de Encomendas{% endblock %}
+
+{% block extra_css %}
+<style>
+    .formset-container {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .item-form {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 15px;
+        border: 2px solid #e9ecef;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    
+    .item-form:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .item-form.to-delete {
+        background-color: #ffebee;
+        border-color: #f44336;
+        opacity: 0.7;
+    }
+    
+    .delete-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+    }
+    
+    .add-item-btn {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        border-radius: 8px;
+        padding: 12px 24px;
+        color: white;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .add-item-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .section-title {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .calculated-field {
+        background-color: #f8f9fa;
+        border: 2px dashed #dee2e6;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+    
+    .form-row {
+        margin-bottom: 15px;
+    }
+    
+    .required-field label::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1><i class="bi bi-clipboard-plus me-3"></i>{{ title }}</h1>
+            <p class="mb-0">Preencha os dados da encomenda conforme o formulário físico</p>
+        </div>
+        <a href="{% url 'encomenda_list' %}" class="btn btn-outline-light">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<form method="post" id="encomendaForm">
+    {% csrf_token %}
+    
+    <!-- Informações Básicas -->
+    <div class="form-section">
+        <h4 class="section-title">
+            <i class="bi bi-info-circle me-2"></i>Informações Básicas
+        </h4>
+        
+        <div class="row">
+            {% if encomenda %}
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Número da Encomenda</label>
+                <input type="text" class="form-control calculated-field" value="{{ encomenda.numero_encomenda }}" readonly>
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Data de Criação</label>
+                <input type="text" class="form-control calculated-field" value="{{ encomenda.data_criacao|date:'d/m/Y H:i' }}" readonly>
+            </div>
+            {% endif %}
+            
+            <div class="col-md-6 mb-3 required-field">
+                <label for="{{ form.cliente.id_for_label }}" class="form-label">{{ form.cliente.label }}</label>
+                {{ form.cliente }}
+                {% if form.cliente.errors %}
+                    <div class="text-danger small">{{ form.cliente.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-3 mb-3 required-field">
+                <label for="{{ form.data_encomenda.id_for_label }}" class="form-label">{{ form.data_encomenda.label }}</label>
+                {{ form.data_encomenda }}
+                {% if form.data_encomenda.errors %}
+                    <div class="text-danger small">{{ form.data_encomenda.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-3 mb-3 required-field">
+                <label for="{{ form.responsavel_criacao.id_for_label }}" class="form-label">{{ form.responsavel_criacao.label }}</label>
+                {{ form.responsavel_criacao }}
+                {% if form.responsavel_criacao.errors %}
+                    <div class="text-danger small">{{ form.responsavel_criacao.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                    <div class="text-danger small">{{ form.status.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            {% if encomenda %}
+            <div class="col-md-6 mb-3">
+                <label class="form-label">Valor Total</label>
+                <div class="input-group">
+                    <span class="input-group-text">R$</span>
+                    <input type="text" class="form-control calculated-field" id="valorTotal" value="{{ encomenda.valor_total|floatformat:2 }}" readonly>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="row">
+            <div class="col-12 mb-3">
+                <label for="{{ form.observacoes.id_for_label }}" class="form-label">{{ form.observacoes.label }}</label>
+                {{ form.observacoes }}
+                {% if form.observacoes.errors %}
+                    <div class="text-danger small">{{ form.observacoes.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Itens da Encomenda -->
+    <div class="form-section">
+        <h4 class="section-title">
+            <i class="bi bi-box me-2"></i>Itens da Encomenda
+        </h4>
+        
+        <div class="formset-container">
+            {{ formset.management_form }}
+            
+            <div id="formset-container">
+                {% for form in formset %}
+                    <div class="item-form" data-form-index="{{ forloop.counter0 }}">
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                        {% endif %}
+                        
+                        {% if formset.can_delete %}
+                            <button type="button" class="btn btn-danger btn-sm delete-btn delete-form" title="Remover Item">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                            {{ form.DELETE }}
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3 required-field">
+                                <label for="{{ form.produto.id_for_label }}" class="form-label">{{ form.produto.label }}</label>
+                                {{ form.produto }}
+                                {% if form.produto.errors %}
+                                    <div class="text-danger small">{{ form.produto.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3 required-field">
+                                <label for="{{ form.fornecedor.id_for_label }}" class="form-label">{{ form.fornecedor.label }}</label>
+                                {{ form.fornecedor }}
+                                {% if form.fornecedor.errors %}
+                                    <div class="text-danger small">{{ form.fornecedor.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-2 mb-3 required-field">
+                                <label for="{{ form.quantidade.id_for_label }}" class="form-label">{{ form.quantidade.label }}</label>
+                                {{ form.quantidade }}
+                                {% if form.quantidade.errors %}
+                                    <div class="text-danger small">{{ form.quantidade.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-2 mb-3 required-field">
+                                <label for="{{ form.preco_cotado.id_for_label }}" class="form-label">{{ form.preco_cotado.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">R$</span>
+                                    {{ form.preco_cotado }}
+                                </div>
+                                {% if form.preco_cotado.errors %}
+                                    <div class="text-danger small">{{ form.preco_cotado.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.observacoes.id_for_label }}" class="form-label">{{ form.observacoes.label }}</label>
+                                {{ form.observacoes }}
+                                {% if form.observacoes.errors %}
+                                    <div class="text-danger small">{{ form.observacoes.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% for hidden in form.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <div class="text-center mt-3">
+                <button type="button" class="btn add-item-btn" id="add-form">
+                    <i class="bi bi-plus-circle me-2"></i>Adicionar Item
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botões de Ação -->
+    <div class="form-section">
+        <div class="d-flex justify-content-between">
+            <a href="{% url 'encomenda_list' %}" class="btn btn-secondary">
+                <i class="bi bi-x-circle me-2"></i>Cancelar
+            </a>
+            
+            <div>
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-check-circle me-2"></i>
+                    {% if encomenda %}Atualizar{% else %}Criar{% endif %} Encomenda
+                </button>
+                
+                {% if encomenda %}
+                <a href="{% url 'encomenda_detail' encomenda.pk %}" class="btn btn-info">
+                    <i class="bi bi-eye me-2"></i>Ver Detalhes
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</form>
+
+<!-- Template para novos itens -->
+<div id="empty-form" style="display: none;">
+    <div class="item-form" data-form-index="__prefix__">
+        <button type="button" class="btn btn-danger btn-sm delete-btn delete-form" title="Remover Item">
+            <i class="bi bi-trash"></i>
+        </button>
+        
+        <div class="row">
+            <div class="col-md-4 mb-3 required-field">
+                <label class="form-label">Produto</label>
+                {{ formset.empty_form.produto }}
+            </div>
+            
+            <div class="col-md-4 mb-3 required-field">
+                <label class="form-label">Fornecedor</label>
+                {{ formset.empty_form.fornecedor }}
+            </div>
+            
+            <div class="col-md-2 mb-3 required-field">
+                <label class="form-label">Quantidade</label>
+                {{ formset.empty_form.quantidade }}
+            </div>
+            
+            <div class="col-md-2 mb-3 required-field">
+                <label class="form-label">Preço Cotado</label>
+                <div class="input-group">
+                    <span class="input-group-text">R$</span>
+                    {{ formset.empty_form.preco_cotado }}
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12 mb-3">
+                <label class="form-label">Observações</label>
+                {{ formset.empty_form.observacoes }}
+            </div>
+        </div>
+        
+        {% for hidden in formset.empty_form.hidden_fields %}
+            {{ hidden }}
+        {% endfor %}
+        {{ formset.empty_form.DELETE }}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formsetContainer = document.getElementById('formset-container');
+    const addButton = document.getElementById('add-form');
+    const totalFormsInput = document.getElementById('id_itens-TOTAL_FORMS');
+    
+    // Função para atualizar índices dos formulários
+    function updateFormIndexes() {
+        const forms = formsetContainer.querySelectorAll('.item-form');
+        forms.forEach((form, index) => {
+            form.setAttribute('data-form-index', index);
+            
+            // Atualizar todos os campos do formulário
+            const inputs = form.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                const name = input.getAttribute('name');
+                const id = input.getAttribute('id');
+                
+                if (name) {
+                    input.setAttribute('name', name.replace(/itens-\d+/, `itens-${index}`));
+                }
+                if (id) {
+                    input.setAttribute('id', id.replace(/itens-\d+/, `itens-${index}`));
+                }
+            });
+            
+            // Atualizar labels
+            const labels = form.querySelectorAll('label');
+            labels.forEach(label => {
+                const forAttr = label.getAttribute('for');
+                if (forAttr) {
+                    label.setAttribute('for', forAttr.replace(/itens-\d+/, `itens-${index}`));
+                }
+            });
+        });
+        
+        // Atualizar total de formulários
+        totalFormsInput.value = forms.length;
+    }
+    
+    // Adicionar novo formulário
+    addButton.addEventListener('click', function() {
+        const emptyForm = document.getElementById('empty-form');
+        const newForm = emptyForm.innerHTML;
+        const formCount = formsetContainer.children.length;
+        
+        const newFormHtml = newForm.replace(/__prefix__/g, formCount);
+        formsetContainer.insertAdjacentHTML('beforeend', newFormHtml);
+        
+        updateFormIndexes();
+        
+        // Adicionar event listener para o botão de deletar
+        const newFormElement = formsetContainer.lastElementChild;
+        const deleteBtn = newFormElement.querySelector('.delete-form');
+        deleteBtn.addEventListener('click', function() {
+            deleteForm(newFormElement);
+        });
+    });
+    
+    // Função para deletar formulário
+    function deleteForm(formElement) {
+        const deleteInput = formElement.querySelector('input[name$="-DELETE"]');
+        
+        if (deleteInput) {
+            deleteInput.checked = true;
+            formElement.classList.add('to-delete');
+            formElement.style.display = 'none';
+        } else {
+            formElement.remove();
+            updateFormIndexes();
+        }
+    }
+    
+    // Adicionar event listeners para botões de deletar existentes
+    document.querySelectorAll('.delete-form').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const formElement = this.closest('.item-form');
+            deleteForm(formElement);
+        });
+    });
+    
+    // Auto-preenchimento de preço baseado no produto selecionado
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('produto-select')) {
+            const produtoId = e.target.value;
+            if (produtoId) {
+                fetch(`/api/produto/${produtoId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const formElement = e.target.closest('.item-form');
+                        const precoInput = formElement.querySelector('input[name$="-preco_cotado"]');
+                        if (precoInput && data.preco_base) {
+                            precoInput.value = data.preco_base;
+                        }
+                    })
+                    .catch(error => console.error('Erro ao buscar dados do produto:', error));
+            }
+        }
+    });
+    
+    // Validação do formulário
+    document.getElementById('encomendaForm').addEventListener('submit', function(e) {
+        const visibleForms = formsetContainer.querySelectorAll('.item-form:not(.to-delete):not([style*="display: none"])');
+        
+        if (visibleForms.length === 0) {
+            e.preventDefault();
+            alert('É necessário adicionar pelo menos um item à encomenda.');
+            return false;
+        }
+        
+        // Validar campos obrigatórios dos itens visíveis
+        let hasErrors = false;
+        visibleForms.forEach(form => {
+            const requiredFields = form.querySelectorAll('.required-field input, .required-field select');
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    hasErrors = true;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+        });
+        
+        if (hasErrors) {
+            e.preventDefault();
+            alert('Por favor, preencha todos os campos obrigatórios.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

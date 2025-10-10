@@ -1,0 +1,222 @@
+{% extends 'encomendas/base.html' %}
+
+{% block title %}{{ title }} - Sistema de Encomendas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1><i class="bi bi-truck me-3"></i>{{ title }}</h1>
+            <p class="mb-0">Configure as informações de entrega</p>
+        </div>
+        <a href="{% url 'encomenda_detail' encomenda.numero_encomenda %}" class="btn btn-outline-light">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<!-- Resumo da Encomenda -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-clipboard-data me-2"></i>Resumo da Encomenda</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Número:</strong> #{{ encomenda.numero_encomenda }}</p>
+                <p><strong>Cliente:</strong> {{ encomenda.cliente.nome }}</p>
+                <p><strong>Endereço:</strong> {{ encomenda.cliente.endereco }}</p>
+                <p><strong>Bairro:</strong> {{ encomenda.cliente.bairro }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Status:</strong> 
+                    <span class="status-badge status-{{ encomenda.status }}">
+                        {{ encomenda.get_status_display }}
+                    </span>
+                </p>
+                <p><strong>Valor Total:</strong> R$ {{ encomenda.valor_total|floatformat:2 }}</p>
+                <p><strong>Telefone:</strong> {{ encomenda.cliente.telefone|default:"Não informado" }}</p>
+                {% if encomenda.cliente.referencia %}
+                <p><strong>Referência:</strong> {{ encomenda.cliente.referencia }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Formulário de Entrega -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-calendar-check me-2"></i>Informações de Entrega</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Programação da Entrega -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="bi bi-calendar-plus me-2"></i>Programação
+                    </h6>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.data_prevista.id_for_label }}" class="form-label">{{ form.data_prevista.label }} *</label>
+                    {{ form.data_prevista }}
+                    {% if form.data_prevista.errors %}
+                        <div class="text-danger small">{{ form.data_prevista.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.hora_prevista.id_for_label }}" class="form-label">{{ form.hora_prevista.label }}</label>
+                    {{ form.hora_prevista }}
+                    {% if form.hora_prevista.errors %}
+                        <div class="text-danger small">{{ form.hora_prevista.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="{{ form.responsavel.id_for_label }}" class="form-label">{{ form.responsavel.label }} *</label>
+                    {{ form.responsavel }}
+                    {% if form.responsavel.errors %}
+                        <div class="text-danger small">{{ form.responsavel.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Informações Financeiras -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="text-success border-bottom pb-2 mb-3">
+                        <i class="bi bi-currency-dollar me-2"></i>Valores
+                    </h6>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.valor_adiantamento.id_for_label }}" class="form-label">{{ form.valor_adiantamento.label }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        {{ form.valor_adiantamento }}
+                    </div>
+                    {% if form.valor_adiantamento.errors %}
+                        <div class="text-danger small">{{ form.valor_adiantamento.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Valor Restante</label>
+                    <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" class="form-control calculated-field" id="valorRestante" readonly>
+                    </div>
+                    <small class="text-muted">Calculado automaticamente</small>
+                </div>
+            </div>
+            
+            <!-- Execução da Entrega -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="text-info border-bottom pb-2 mb-3">
+                        <i class="bi bi-check-circle me-2"></i>Execução (Opcional)
+                    </h6>
+                    <p class="text-muted small">Preencha apenas quando a entrega for realizada</p>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.data_realizada.id_for_label }}" class="form-label">{{ form.data_realizada.label }}</label>
+                    {{ form.data_realizada }}
+                    {% if form.data_realizada.errors %}
+                        <div class="text-danger small">{{ form.data_realizada.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.entregue_por.id_for_label }}" class="form-label">{{ form.entregue_por.label }}</label>
+                    {{ form.entregue_por }}
+                    {% if form.entregue_por.errors %}
+                        <div class="text-danger small">{{ form.entregue_por.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-12 mb-3">
+                    <div class="form-check">
+                        {{ form.assinatura_cliente }}
+                        <label class="form-check-label" for="{{ form.assinatura_cliente.id_for_label }}">
+                            {{ form.assinatura_cliente.label }}
+                        </label>
+                    </div>
+                    {% if form.assinatura_cliente.errors %}
+                        <div class="text-danger small">{{ form.assinatura_cliente.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Observações -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <label for="{{ form.observacoes_entrega.id_for_label }}" class="form-label">{{ form.observacoes_entrega.label }}</label>
+                    {{ form.observacoes_entrega }}
+                    {% if form.observacoes_entrega.errors %}
+                        <div class="text-danger small">{{ form.observacoes_entrega.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Botões de Ação -->
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'encomenda_detail' encomenda.numero_encomenda %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle me-2"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-2"></i>
+                    {% if entrega %}Atualizar{% else %}Programar{% endif %} Entrega
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const valorTotal = {{ encomenda.valor_total }};
+    const adiantamentoInput = document.getElementById('{{ form.valor_adiantamento.id_for_label }}');
+    const valorRestanteInput = document.getElementById('valorRestante');
+    
+    function calcularValorRestante() {
+        const adiantamento = parseFloat(adiantamentoInput.value) || 0;
+        const restante = valorTotal - adiantamento;
+        valorRestanteInput.value = restante.toFixed(2);
+        
+        // Validar se adiantamento não é maior que o total
+        if (adiantamento > valorTotal) {
+            adiantamentoInput.classList.add('is-invalid');
+            valorRestanteInput.classList.add('is-invalid');
+        } else {
+            adiantamentoInput.classList.remove('is-invalid');
+            valorRestanteInput.classList.remove('is-invalid');
+        }
+    }
+    
+    // Calcular valor restante ao carregar a página
+    calcularValorRestante();
+    
+    // Recalcular quando o adiantamento mudar
+    adiantamentoInput.addEventListener('input', calcularValorRestante);
+    
+    // Auto-preencher responsável da entrega quando data realizada for preenchida
+    const dataRealizadaInput = document.getElementById('{{ form.data_realizada.id_for_label }}');
+    const entregueporInput = document.getElementById('{{ form.entregue_por.id_for_label }}');
+    const responsavelInput = document.getElementById('{{ form.responsavel.id_for_label }}');
+    
+    dataRealizadaInput.addEventListener('change', function() {
+        if (this.value && !entregueporInput.value) {
+            entregueporInput.value = responsavelInput.value;
+        }
+    });
+});
+</script>
+{% endblock %}

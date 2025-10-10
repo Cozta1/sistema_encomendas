@@ -1,0 +1,121 @@
+{% extends 'encomendas/base.html' %}
+
+{% block title %}Clientes - Sistema de Encomendas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1><i class="bi bi-people me-3"></i>Clientes</h1>
+            <p class="mb-0">Gerencie os clientes da Drogaria Benfica</p>
+        </div>
+        <a href="{% url 'cliente_create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus me-2"></i>Novo Cliente
+        </a>
+    </div>
+</div>
+
+<!-- Busca -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-8">
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Buscar por nome, código ou endereço..." 
+                       value="{{ current_search|default:'' }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-search me-1"></i>Buscar
+                </button>
+                <a href="{% url 'cliente_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Lista de Clientes -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="bi bi-list-ul me-2"></i>
+            {% if page_obj.paginator.count %}
+                {{ page_obj.paginator.count }} cliente{{ page_obj.paginator.count|pluralize }}
+            {% else %}
+                Nenhum cliente encontrado
+            {% endif %}
+        </h5>
+    </div>
+    
+    <div class="card-body p-0">
+        {% if page_obj %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nome</th>
+                            <th>Bairro</th>
+                            <th>Telefone</th>
+                            <th>Encomendas</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cliente in page_obj %}
+                        <tr>
+                            <td><strong>{{ cliente.codigo }}</strong></td>
+                            <td>
+                                <div>
+                                    <strong>{{ cliente.nome }}</strong><br>
+                                    <small class="text-muted">{{ cliente.endereco|truncatechars:50 }}</small>
+                                </div>
+                            </td>
+                            <td>{{ cliente.bairro }}</td>
+                            <td>{{ cliente.telefone|default:"-" }}</td>
+                            <td>
+                                <span class="badge bg-primary">
+                                    {{ cliente.encomenda_set.count }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'encomenda_list' %}?cliente={{ cliente.id }}" 
+                                       class="btn btn-outline-primary" title="Ver Encomendas">
+                                        <i class="bi bi-clipboard-data"></i>
+                                    </a>
+                                    <a href="{% url 'encomenda_create' %}?cliente={{ cliente.id }}" 
+                                       class="btn btn-outline-success" title="Nova Encomenda">
+                                        <i class="bi bi-plus-circle"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <i class="bi bi-person-x text-muted" style="font-size: 3rem;"></i>
+                                <h5 class="text-muted mt-3">Nenhum cliente encontrado</h5>
+                                <p class="text-muted">
+                                    {% if current_search %}
+                                        Tente ajustar a busca ou 
+                                        <a href="{% url 'cliente_list' %}">limpar filtros</a>
+                                    {% else %}
+                                        Comece cadastrando seu primeiro cliente!
+                                    {% endif %}
+                                </p>
+                                <a href="{% url 'cliente_create' %}" class="btn btn-primary">
+                                    <i class="bi bi-person-plus me-2"></i>Novo Cliente
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

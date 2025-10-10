@@ -1,0 +1,86 @@
+{% extends 'encomendas/base.html' %}
+
+{% block title %}{{ title }} - Sistema de Encomendas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1><i class="bi bi-box me-3"></i>{{ title }}</h1>
+            <p class="mb-0">Cadastre os dados do produto</p>
+        </div>
+        <a href="{% url 'produto_list' %}" class="btn btn-outline-light">
+            <i class="bi bi-arrow-left me-2"></i>Voltar
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-box me-2"></i>Dados do Produto</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.nome.id_for_label }}" class="form-label">{{ form.nome.label }} *</label>
+                    {{ form.nome }}
+                    {% if form.nome.errors %}
+                        <div class="text-danger small">{{ form.nome.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.codigo.id_for_label }}" class="form-label">{{ form.codigo.label }} *</label>
+                    {{ form.codigo }}
+                    {% if form.codigo.errors %}
+                        <div class="text-danger small">{{ form.codigo.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.categoria.id_for_label }}" class="form-label">{{ form.categoria.label }}</label>
+                    {{ form.categoria }}
+                    {% if form.categoria.errors %}
+                        <div class="text-danger small">{{ form.categoria.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.preco_base.id_for_label }}" class="form-label">{{ form.preco_base.label }} *</label>
+                    <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        {{ form.preco_base }}
+                    </div>
+                    {% if form.preco_base.errors %}
+                        <div class="text-danger small">{{ form.preco_base.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-12 mb-3">
+                    <label for="{{ form.descricao.id_for_label }}" class="form-label">{{ form.descricao.label }}</label>
+                    {{ form.descricao }}
+                    {% if form.descricao.errors %}
+                        <div class="text-danger small">{{ form.descricao.errors.0 }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'produto_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle me-2"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle me-2"></i>Salvar Produto
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

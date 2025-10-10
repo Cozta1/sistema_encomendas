@@ -1,0 +1,34 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # Dashboard
+    path('', views.dashboard, name='dashboard'),
+    
+    # Encomendas
+    path('encomendas/', views.encomenda_list, name='encomenda_list'),
+    path('encomendas/nova/', views.encomenda_create, name='encomenda_create'),
+    path('encomendas/<int:pk>/', views.encomenda_detail, name='encomenda_detail'),
+    path('encomendas/<int:pk>/editar/', views.encomenda_edit, name='encomenda_edit'),
+    path('encomendas/<int:pk>/excluir/', views.encomenda_delete, name='encomenda_delete'),
+    
+    # Entregas
+    path('encomendas/<int:encomenda_pk>/entrega/nova/', views.entrega_create, name='entrega_create'),
+    path('entregas/<int:pk>/editar/', views.entrega_edit, name='entrega_edit'),
+    
+    # Clientes
+    path('clientes/', views.cliente_list, name='cliente_list'),
+    path('clientes/novo/', views.cliente_create, name='cliente_create'),
+    
+    # Produtos
+    path('produtos/', views.produto_list, name='produto_list'),
+    path('produtos/novo/', views.produto_create, name='produto_create'),
+    
+    # Fornecedores
+    path('fornecedores/', views.fornecedor_list, name='fornecedor_list'),
+    path('fornecedores/novo/', views.fornecedor_create, name='fornecedor_create'),
+    
+    # API endpoints
+    path('api/produto/<int:produto_id>/', views.api_produto_info, name='api_produto_info'),
+    path('api/encomenda/<int:encomenda_pk>/status/', views.api_update_status, name='api_update_status'),
+]
