@@ -11,16 +11,12 @@ urlpatterns = [
     # Dashboard
     path('', views.dashboard, name='dashboard'),
     
-    # Encomendas
+    # Encomendas (CRUD Completo)
     path('encomendas/', views.encomenda_list, name='encomenda_list'),
     path('encomendas/nova/', views.encomenda_create, name='encomenda_create'),
     path('encomendas/<int:pk>/', views.encomenda_detail, name='encomenda_detail'),
     path('encomendas/<int:pk>/editar/', views.encomenda_edit, name='encomenda_edit'),
     path('encomendas/<int:pk>/excluir/', views.encomenda_delete, name='encomenda_delete'),
-    
-    # Entregas
-    path('encomendas/<int:encomenda_pk>/entrega/nova/', views.entrega_create, name='entrega_create'),
-    path('entregas/<int:pk>/editar/', views.entrega_edit, name='entrega_edit'),
     
     # Clientes
     path('clientes/', views.cliente_list, name='cliente_list'),

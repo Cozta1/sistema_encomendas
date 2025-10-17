@@ -1,55 +1,67 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 
-from .models import Encomenda, Cliente, Produto, Fornecedor, ItemEncomenda, Entrega
+from .models import Encomenda, Cliente, Produto, Fornecedor, ItemEncomenda, Entrega, Equipe
 from .forms import (
-    EncomendaForm, ItemEncomendaFormSet, EntregaForm, ClienteForm, 
+    EncomendaForm, ItemEncomendaFormSet, EntregaForm, ClienteForm,
     ProdutoForm, FornecedorForm, CustomUserCreationForm
 )
 
-# --- Autenticação ---
+# --- Autenticação e Gestão de Equipe ---
+
 def register(request):
+    """Página de registro para um novo usuário que também cria uma nova equipe."""
     if request.user.is_authenticated:
         return redirect('dashboard')
         
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            form.save()
-            username = form.cleaned_data.get('username')
-            messages.success(request, f'Conta para "{username}" criada com sucesso! Você já pode fazer o login.')
+            # Cria a equipe primeiro
+            nome_equipe = f"Equipe de {form.cleaned_data.get('username')}"
+            equipe = Equipe.objects.create(nome=nome_equipe)
+            
+            # Cria o usuário e o associa à nova equipe
+            user = form.save(commit=False)
+            user.equipe = equipe
+            user.save()
+            
+            messages.success(request, f'Conta e equipe "{nome_equipe}" criadas com sucesso! Você já pode fazer o login.')
             return redirect('login')
     else:
         form = CustomUserCreationForm()
-    return render(request, 'encomendas/register.html', {'form': form})
+    return render(request, 'encomendas/register.html', {'form': form, 'title': 'Criar a Sua Equipe'})
 
 
-# --- Views Principais (Protegidas e Filtradas por Usuário) ---
+# --- Views Principais (Filtradas por Equipe) ---
+
 @login_required
 def dashboard(request):
-    user = request.user
-    total_encomendas = Encomenda.objects.filter(user=user).count()
-    encomendas_pendentes = Encomenda.objects.filter(user=user, status__in=['criada', 'cotacao', 'aprovada', 'em_andamento']).count()
-    encomendas_entregues = Encomenda.objects.filter(user=user, status='entregue').count()
-    
-    ultimas_encomendas = Encomenda.objects.filter(user=user).select_related('cliente').order_by('-data_criacao')[:5]
-    
+    """Dashboard principal com estatísticas da equipe."""
+    equipe = request.user.equipe
+    if not equipe:
+        return render(request, 'encomendas/dashboard_sem_equipe.html')
+
+    encomendas = Encomenda.objects.filter(equipe=equipe)
     context = {
-        'total_encomendas': total_encomendas,
-        'encomendas_pendentes': encomendas_pendentes,
-        'encomendas_entregues': encomendas_entregues,
-        'ultimas_encomendas': ultimas_encomendas,
+        'total_encomendas': encomendas.count(),
+        'encomendas_pendentes': encomendas.exclude(status__in=['entregue', 'cancelada']).count(),
+        'encomendas_entregues': encomendas.filter(status='entregue').count(),
+        'ultimas_encomendas': encomendas.select_related('cliente').order_by('-data_encomenda')[:5],
     }
     return render(request, 'encomendas/dashboard.html', context)
 
+# --- CRUD de Encomendas ---
+
 @login_required
 def encomenda_list(request):
-    encomendas = Encomenda.objects.filter(user=request.user).select_related('cliente').prefetch_related('entrega').order_by('-numero_encomenda')
+    """Lista todas as encomendas da equipe."""
+    encomendas = Encomenda.objects.filter(equipe=request.user.equipe).select_related('cliente', 'responsavel_criacao').order_by('-numero_encomenda')
     
     status_filter = request.GET.get('status')
     cliente_filter = request.GET.get('cliente')
@@ -57,29 +69,22 @@ def encomenda_list(request):
     
     if status_filter:
         encomendas = encomendas.filter(status=status_filter)
-    
     if cliente_filter:
         encomendas = encomendas.filter(cliente__id=cliente_filter)
-    
     if search:
         encomendas = encomendas.filter(
             Q(numero_encomenda__icontains=search) |
             Q(cliente__nome__icontains=search) |
-            Q(cliente__codigo__icontains=search) |
-            Q(itens__produto__nome__icontains=search) |
-            Q(itens__produto__codigo__icontains=search)
+            Q(itens__produto__nome__icontains=search)
         ).distinct()
-    
+
     paginator = Paginator(encomendas, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
     
-    clientes = Cliente.objects.filter(user=request.user).order_by('nome')
-    status_choices = Encomenda.STATUS_CHOICES
-    
     context = {
         'page_obj': page_obj,
-        'clientes': clientes,
-        'status_choices': status_choices,
+        'clientes': Cliente.objects.filter(equipe=request.user.equipe),
+        'status_choices': Encomenda.STATUS_CHOICES,
         'current_status': status_filter,
         'current_cliente': int(cliente_filter) if cliente_filter else None,
         'current_search': search,
@@ -88,9 +93,8 @@ def encomenda_list(request):
 
 @login_required
 def encomenda_detail(request, pk):
-    encomenda = get_object_or_404(Encomenda, pk=pk, user=request.user)
+    encomenda = get_object_or_404(Encomenda, pk=pk, equipe=request.user.equipe)
     itens = encomenda.itens.select_related('produto', 'fornecedor').all()
-    
     try:
         entrega = encomenda.entrega
     except Entrega.DoesNotExist:
@@ -103,71 +107,83 @@ def encomenda_detail(request, pk):
 def encomenda_create(request):
     if request.method == 'POST':
         form = EncomendaForm(request.user, request.POST)
-        formset = ItemEncomendaFormSet(request.POST)
+        formset = ItemEncomendaFormSet(request.POST, form_kwargs={'user': request.user})
         
         if form.is_valid() and formset.is_valid():
             encomenda = form.save(commit=False)
-            encomenda.user = request.user
+            encomenda.equipe = request.user.equipe
+            encomenda.responsavel_criacao = request.user
+            encomenda.status = 'criada'
             encomenda.save()
             
-            for item_form in formset:
-                if item_form.cleaned_data and not item_form.cleaned_data.get('DELETE', False):
-                    item = item_form.save(commit=False)
-                    item.encomenda = encomenda
-                    item.save()
+            formset.instance = encomenda
+            formset.save()
             
             encomenda.calcular_valor_total()
             messages.success(request, f'Encomenda #{encomenda.numero_encomenda} criada com sucesso!')
             return redirect('encomenda_detail', pk=encomenda.pk)
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
     else:
         form = EncomendaForm(user=request.user)
-        formset = ItemEncomendaFormSet()
+        if 'status' in form.fields:
+            form.fields.pop('status')
+        formset = ItemEncomendaFormSet(form_kwargs={'user': request.user})
     
-    context = {'form': form, 'formset': formset, 'title': 'Nova Encomenda'}
-    return render(request, 'encomendas/encomenda_form.html', context)
+    return render(request, 'encomendas/encomenda_form.html', {'form': form, 'formset': formset, 'title': 'Nova Encomenda'})
 
 @login_required
 def encomenda_edit(request, pk):
-    encomenda = get_object_or_404(Encomenda, pk=pk, user=request.user)
-    
+    encomenda = get_object_or_404(Encomenda, pk=pk, equipe=request.user.equipe)
+    entrega, created = Entrega.objects.get_or_create(encomenda=encomenda)
+
     if request.method == 'POST':
         form = EncomendaForm(request.user, request.POST, instance=encomenda)
-        formset = ItemEncomendaFormSet(request.POST, instance=encomenda)
+        entrega_form = EntregaForm(request.POST, instance=entrega)
+        formset = ItemEncomendaFormSet(request.POST, instance=encomenda, form_kwargs={'user': request.user})
         
-        if form.is_valid() and formset.is_valid():
+        if form.is_valid() and formset.is_valid() and entrega_form.is_valid():
             form.save()
+            entrega_form.save()
             formset.save()
+            
             encomenda.calcular_valor_total()
             messages.success(request, f'Encomenda #{encomenda.numero_encomenda} atualizada com sucesso!')
             return redirect('encomenda_detail', pk=encomenda.pk)
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
     else:
         form = EncomendaForm(user=request.user, instance=encomenda)
-        formset = ItemEncomendaFormSet(instance=encomenda)
+        entrega_form = EntregaForm(instance=entrega)
+        formset = ItemEncomendaFormSet(instance=encomenda, form_kwargs={'user': request.user})
     
-    context = {'form': form, 'formset': formset, 'encomenda': encomenda, 'title': f'Editar Encomenda #{encomenda.numero_encomenda}'}
+    context = {
+        'form': form, 
+        'formset': formset, 
+        'entrega_form': entrega_form,
+        'encomenda': encomenda,
+        'title': f'Editar Encomenda #{encomenda.numero_encomenda}'
+    }
     return render(request, 'encomendas/encomenda_form.html', context)
 
 @login_required
 def encomenda_delete(request, pk):
-    encomenda = get_object_or_404(Encomenda, pk=pk, user=request.user)
+    encomenda = get_object_or_404(Encomenda, pk=pk, equipe=request.user.equipe)
     if request.method == 'POST':
         numero = encomenda.numero_encomenda
         encomenda.delete()
         messages.success(request, f'Encomenda #{numero} excluída com sucesso!')
         return redirect('encomenda_list')
-    context = {'encomenda': encomenda}
-    return render(request, 'encomendas/encomenda_confirm_delete.html', context)
+    return render(request, 'encomendas/encomenda_confirm_delete.html', {'encomenda': encomenda})
+
+# --- CRUD de Clientes, Produtos, Fornecedores ---
 
 @login_required
 def cliente_list(request):
-    clientes = Cliente.objects.filter(user=request.user).order_by('nome')
-    search = request.GET.get('search')
-    if search:
-        clientes = clientes.filter(Q(nome__icontains=search) | Q(codigo__icontains=search) | Q(endereco__icontains=search))
+    clientes = Cliente.objects.filter(equipe=request.user.equipe).order_by('nome')
     paginator = Paginator(clientes, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
-    context = {'page_obj': page_obj, 'current_search': search}
-    return render(request, 'encomendas/cliente_list.html', context)
+    return render(request, 'encomendas/cliente_list.html', {'page_obj': page_obj})
 
 @login_required
 def cliente_create(request):
@@ -175,28 +191,20 @@ def cliente_create(request):
         form = ClienteForm(request.POST)
         if form.is_valid():
             cliente = form.save(commit=False)
-            cliente.user = request.user
+            cliente.equipe = request.user.equipe
             cliente.save()
             messages.success(request, f'Cliente {cliente.nome} criado com sucesso!')
             return redirect('cliente_list')
     else:
         form = ClienteForm()
-    context = {'form': form, 'title': 'Novo Cliente'}
-    return render(request, 'encomendas/cliente_form.html', context)
+    return render(request, 'encomendas/cliente_form.html', {'form': form, 'title': 'Novo Cliente'})
 
-# ... (Repita a lógica de filtro e associação para produto_list, produto_create, fornecedor_list, fornecedor_create)
 @login_required
 def produto_list(request):
-    produtos = Produto.objects.filter(user=request.user).order_by('nome')
-    # ... resto da view igual
-    search = request.GET.get('search')
-    if search:
-        produtos = produtos.filter(Q(nome__icontains=search) | Q(codigo__icontains=search) | Q(categoria__icontains=search))
+    produtos = Produto.objects.filter(equipe=request.user.equipe).order_by('nome')
     paginator = Paginator(produtos, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
-    context = {'page_obj': page_obj, 'current_search': search}
-    return render(request, 'encomendas/produto_list.html', context)
-
+    return render(request, 'encomendas/produto_list.html', {'page_obj': page_obj})
 
 @login_required
 def produto_create(request):
@@ -204,28 +212,20 @@ def produto_create(request):
         form = ProdutoForm(request.POST)
         if form.is_valid():
             produto = form.save(commit=False)
-            produto.user = request.user
+            produto.equipe = request.user.equipe
             produto.save()
             messages.success(request, f'Produto {produto.nome} criado com sucesso!')
             return redirect('produto_list')
     else:
         form = ProdutoForm()
-    context = {'form': form, 'title': 'Novo Produto'}
-    return render(request, 'encomendas/produto_form.html', context)
-
+    return render(request, 'encomendas/produto_form.html', {'form': form, 'title': 'Novo Produto'})
 
 @login_required
 def fornecedor_list(request):
-    fornecedores = Fornecedor.objects.filter(user=request.user).order_by('nome')
-    # ... resto da view igual
-    search = request.GET.get('search')
-    if search:
-        fornecedores = fornecedores.filter(Q(nome__icontains=search) | Q(codigo__icontains=search) | Q(contato__icontains=search))
+    fornecedores = Fornecedor.objects.filter(equipe=request.user.equipe).order_by('nome')
     paginator = Paginator(fornecedores, 20)
     page_obj = paginator.get_page(request.GET.get('page'))
-    context = {'page_obj': page_obj, 'current_search': search}
-    return render(request, 'encomendas/fornecedor_list.html', context)
-
+    return render(request, 'encomendas/fornecedor_list.html', {'page_obj': page_obj})
 
 @login_required
 def fornecedor_create(request):
@@ -233,74 +233,21 @@ def fornecedor_create(request):
         form = FornecedorForm(request.POST)
         if form.is_valid():
             fornecedor = form.save(commit=False)
-            fornecedor.user = request.user
+            fornecedor.equipe = request.user.equipe
             fornecedor.save()
             messages.success(request, f'Fornecedor {fornecedor.nome} criado com sucesso!')
             return redirect('fornecedor_list')
     else:
         form = FornecedorForm()
-    context = {'form': form, 'title': 'Novo Fornecedor'}
-    return render(request, 'encomendas/fornecedor_form.html', context)
-
-# ... (O resto das views (entrega, apis) permanece o mesmo, mas com a checagem de usuário na encomenda)
-@login_required
-def entrega_create(request, encomenda_pk):
-    encomenda = get_object_or_404(Encomenda, pk=encomenda_pk, user=request.user)
-    # ... resto da view igual
-    try:
-        entrega = encomenda.entrega
-        return redirect('entrega_edit', pk=entrega.pk)
-    except Entrega.DoesNotExist:
-        pass
-    
-    if request.method == 'POST':
-        form = EntregaForm(request.POST)
-        if form.is_valid():
-            entrega = form.save(commit=False)
-            entrega.encomenda = encomenda
-            entrega.save()
-            messages.success(request, 'Informações de entrega criadas com sucesso!')
-            return redirect('encomenda_detail', pk=encomenda.pk)
-    else:
-        form = EntregaForm()
-    
-    context = {
-        'form': form,
-        'encomenda': encomenda,
-        'title': f'Programar Entrega - Encomenda #{encomenda.numero_encomenda}',
-    }
-    return render(request, 'encomendas/entrega_form.html', context)
+    return render(request, 'encomendas/fornecedor_form.html', {'form': form, 'title': 'Novo Fornecedor'})
 
 
-@login_required
-def entrega_edit(request, pk):
-    entrega = get_object_or_404(Entrega, pk=pk, encomenda__user=request.user)
-    # ... resto da view igual
-    if request.method == 'POST':
-        form = EntregaForm(request.POST, instance=entrega)
-        if form.is_valid():
-            entrega = form.save()
-            if entrega.data_entrega_realizada and entrega.assinatura_cliente:
-                entrega.encomenda.status = 'entregue'
-                entrega.encomenda.save()
-            messages.success(request, 'Informações de entrega atualizadas com sucesso!')
-            return redirect('encomenda_detail', pk=entrega.encomenda.pk)
-    else:
-        form = EntregaForm(instance=entrega)
-    
-    context = {
-        'form': form,
-        'entrega': entrega,
-        'title': f'Editar Entrega - Encomenda #{entrega.encomenda.numero_encomenda}',
-    }
-    return render(request, 'encomendas/entrega_form.html', context)
-
+# --- Endpoints da API (Protegidos) ---
 
 @login_required
 @require_http_methods(["POST"])
 def api_update_status(request, encomenda_pk):
-    encomenda = get_object_or_404(Encomenda, pk=encomenda_pk, user=request.user)
-    # ... resto da view igual
+    encomenda = get_object_or_404(Encomenda, pk=encomenda_pk, equipe=request.user.equipe)
     new_status = request.POST.get('status')
     if new_status in dict(Encomenda.STATUS_CHOICES):
         encomenda.status = new_status
@@ -308,11 +255,9 @@ def api_update_status(request, encomenda_pk):
         return JsonResponse({'success': True, 'status': encomenda.get_status_display()})
     return JsonResponse({'error': 'Status inválido'}, status=400)
 
-
 @login_required
 @require_http_methods(["GET"])
 def api_produto_info(request, produto_id):
-    # Produtos são filtrados pelo usuário, então a API também deve ser
-    produto = get_object_or_404(Produto, id=produto_id, user=request.user)
+    produto = get_object_or_404(Produto, id=produto_id, equipe=request.user.equipe)
     data = {'nome': produto.nome, 'codigo': produto.codigo, 'preco_base': str(produto.preco_base)}
     return JsonResponse(data)

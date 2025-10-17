@@ -1,335 +1,148 @@
 {% extends 'encomendas/base.html' %}
-
 {% block title %}{{ title }} - Sistema de Encomendas{% endblock %}
 
 {% block extra_css %}
 <style>
-    .formset-container {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
+    .item-form { 
+        background-color: #f8f9fa; 
     }
-    
-    .item-form {
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 15px;
-        border: 2px solid #e9ecef;
-        position: relative;
-        transition: all 0.3s ease;
+    .calculated-field { 
+        background-color: #e9ecef; 
+        font-weight: bold; 
     }
-    
-    .item-form:hover {
-        border-color: var(--primary-color);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    /* Estilos para destacar campos com erro */
+    .is-invalid { 
+        border-color: #dc3545 !important; 
     }
-    
-    .item-form.to-delete {
-        background-color: #ffebee;
-        border-color: #f44336;
-        opacity: 0.7;
-    }
-    
-    .delete-btn {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 10;
-    }
-    
-    .add-item-btn {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        border: none;
-        border-radius: 8px;
-        padding: 12px 24px;
-        color: white;
-        font-weight: 500;
-        transition: all 0.3s ease;
-    }
-    
-    .add-item-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
-        color: white;
-    }
-    
-    .form-section {
-        background: white;
-        border-radius: 12px;
-        padding: 25px;
-        margin-bottom: 25px;
-        border: 1px solid #e9ecef;
-    }
-    
-    .section-title {
-        color: var(--primary-color);
-        font-weight: 600;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #e9ecef;
-    }
-    
-    .calculated-field {
-        background-color: #f8f9fa;
-        border: 2px dashed #dee2e6;
-        font-weight: bold;
-        color: var(--primary-color);
-    }
-    
-    .form-row {
-        margin-bottom: 15px;
-    }
-    
-    .required-field label::after {
-        content: " *";
+    .invalid-feedback { 
+        display: block; 
         color: #dc3545;
+        font-size: 0.875em;
+        margin-top: 0.25rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <div class="d-flex justify-content-between align-items-center">
-        <div>
-            <h1><i class="bi bi-clipboard-plus me-3"></i>{{ title }}</h1>
-            <p class="mb-0">Preencha os dados da encomenda conforme o formulário físico</p>
-        </div>
-        <a href="{% url 'encomenda_list' %}" class="btn btn-outline-light">
-            <i class="bi bi-arrow-left me-2"></i>Voltar
-        </a>
-    </div>
+    <h1><i class="bi bi-clipboard-plus me-3"></i>{{ title }}</h1>
 </div>
 
 <form method="post" id="encomendaForm">
     {% csrf_token %}
     
-    <!-- Informações Básicas -->
-    <div class="form-section">
-        <h4 class="section-title">
-            <i class="bi bi-info-circle me-2"></i>Informações Básicas
-        </h4>
-        
-        <div class="row">
-            {% if encomenda %}
-            <div class="col-md-3 mb-3">
-                <label class="form-label">Número da Encomenda</label>
-                <input type="text" class="form-control calculated-field" value="{{ encomenda.numero_encomenda }}" readonly>
-            </div>
-            <div class="col-md-3 mb-3">
-                <label class="form-label">Data de Criação</label>
-                <input type="text" class="form-control calculated-field" value="{{ encomenda.data_criacao|date:'d/m/Y H:i' }}" readonly>
-            </div>
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Dados da Encomenda</h5></div>
+        <div class="card-body">
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
             {% endif %}
-            
-            <div class="col-md-6 mb-3 required-field">
-                <label for="{{ form.cliente.id_for_label }}" class="form-label">{{ form.cliente.label }}</label>
-                {{ form.cliente }}
-                {% if form.cliente.errors %}
-                    <div class="text-danger small">{{ form.cliente.errors.0 }}</div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.cliente.id_for_label }}" class="form-label">{{ form.cliente.label }}</label>
+                    {{ form.cliente }}
+                    {% for error in form.cliente.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                {% if encomenda and form.status %}
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                    {{ form.status }}
+                    {% for error in form.status.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
                 {% endif %}
-            </div>
-            
-            <div class="col-md-3 mb-3 required-field">
-                <label for="{{ form.data_encomenda.id_for_label }}" class="form-label">{{ form.data_encomenda.label }}</label>
-                {{ form.data_encomenda }}
-                {% if form.data_encomenda.errors %}
-                    <div class="text-danger small">{{ form.data_encomenda.errors.0 }}</div>
-                {% endif %}
-            </div>
-            
-            <div class="col-md-3 mb-3 required-field">
-                <label for="{{ form.responsavel_criacao.id_for_label }}" class="form-label">{{ form.responsavel_criacao.label }}</label>
-                {{ form.responsavel_criacao }}
-                {% if form.responsavel_criacao.errors %}
-                    <div class="text-danger small">{{ form.responsavel_criacao.errors.0 }}</div>
-                {% endif %}
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
-                {{ form.status }}
-                {% if form.status.errors %}
-                    <div class="text-danger small">{{ form.status.errors.0 }}</div>
-                {% endif %}
-            </div>
-            
-            {% if encomenda %}
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Valor Total</label>
-                <div class="input-group">
-                    <span class="input-group-text">R$</span>
-                    <input type="text" class="form-control calculated-field" id="valorTotal" value="{{ encomenda.valor_total|floatformat:2 }}" readonly>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.data_prevista_entrega.id_for_label }}" class="form-label">{{ form.data_prevista_entrega.label }}</label>
+                    {{ form.data_prevista_entrega }}
+                    {% for error in form.data_prevista_entrega.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="{{ form.valor_pago_adiantamento.id_for_label }}" class="form-label">{{ form.valor_pago_adiantamento.label }}</label>
+                    {{ form.valor_pago_adiantamento }}
+                    {% for error in form.valor_pago_adiantamento.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-12 mb-3">
+                    <label for="{{ form.observacoes.id_for_label }}" class="form-label">{{ form.observacoes.label }}</label>
+                    {{ form.observacoes }}
+                    {% for error in form.observacoes.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                 </div>
             </div>
-            {% endif %}
-        </div>
-        
-        <div class="row">
-            <div class="col-12 mb-3">
-                <label for="{{ form.observacoes.id_for_label }}" class="form-label">{{ form.observacoes.label }}</label>
-                {{ form.observacoes }}
-                {% if form.observacoes.errors %}
-                    <div class="text-danger small">{{ form.observacoes.errors.0 }}</div>
-                {% endif %}
-            </div>
         </div>
     </div>
 
-    <!-- Itens da Encomenda -->
-    <div class="form-section">
-        <h4 class="section-title">
-            <i class="bi bi-box me-2"></i>Itens da Encomenda
-        </h4>
-        
-        <div class="formset-container">
+    {% if encomenda and entrega_form %}
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">Dados da Execução da Entrega</h5></div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3"><label for="{{ entrega_form.responsavel_entrega.id_for_label }}">{{ entrega_form.responsavel_entrega.label }}</label>{{ entrega_form.responsavel_entrega }}</div>
+                <div class="col-md-6 mb-3"><label for="{{ entrega_form.entregue_por.id_for_label }}">{{ entrega_form.entregue_por.label }}</label>{{ entrega_form.entregue_por }}</div>
+                <div class="col-md-6 mb-3"><label for="{{ entrega_form.data_entrega_realizada.id_for_label }}">{{ entrega_form.data_entrega_realizada.label }}</label>{{ entrega_form.data_entrega_realizada }}</div>
+                <div class="col-md-6 mb-3"><label for="{{ entrega_form.hora_entrega.id_for_label }}">{{ entrega_form.hora_entrega.label }}</label>{{ entrega_form.hora_entrega }}</div>
+                <div class="col-12 mb-3"><label for="{{ entrega_form.assinatura_cliente.id_for_label }}">{{ entrega_form.assinatura_cliente.label }}</label>{{ entrega_form.assinatura_cliente }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header"><h5 class="mb-0">Itens da Encomenda</h5></div>
+        <div class="card-body">
             {{ formset.management_form }}
-            
+            {% if formset.non_form_errors %}
+                <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+            {% endif %}
             <div id="formset-container">
-                {% for form in formset %}
-                    <div class="item-form" data-form-index="{{ forloop.counter0 }}">
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-                        {% endif %}
-                        
-                        {% if formset.can_delete %}
-                            <button type="button" class="btn btn-danger btn-sm delete-btn delete-form" title="Remover Item">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                            {{ form.DELETE }}
-                        {% endif %}
-                        
-                        <div class="row">
-                            <div class="col-md-4 mb-3 required-field">
-                                <label for="{{ form.produto.id_for_label }}" class="form-label">{{ form.produto.label }}</label>
-                                {{ form.produto }}
-                                {% if form.produto.errors %}
-                                    <div class="text-danger small">{{ form.produto.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-4 mb-3 required-field">
-                                <label for="{{ form.fornecedor.id_for_label }}" class="form-label">{{ form.fornecedor.label }}</label>
-                                {{ form.fornecedor }}
-                                {% if form.fornecedor.errors %}
-                                    <div class="text-danger small">{{ form.fornecedor.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-2 mb-3 required-field">
-                                <label for="{{ form.quantidade.id_for_label }}" class="form-label">{{ form.quantidade.label }}</label>
-                                {{ form.quantidade }}
-                                {% if form.quantidade.errors %}
-                                    <div class="text-danger small">{{ form.quantidade.errors.0 }}</div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-2 mb-3 required-field">
-                                <label for="{{ form.preco_cotado.id_for_label }}" class="form-label">{{ form.preco_cotado.label }}</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">R$</span>
-                                    {{ form.preco_cotado }}
-                                </div>
-                                {% if form.preco_cotado.errors %}
-                                    <div class="text-danger small">{{ form.preco_cotado.errors.0 }}</div>
-                                {% endif %}
-                            </div>
+                {% for item_form in formset %}
+                <div class="item-form border rounded p-3 mb-3 position-relative" id="item-{{ forloop.counter0 }}">
+                    <button type="button" class="btn-close position-absolute top-0 end-0 p-2 delete-form" aria-label="Close"></button>
+                    {{ item_form.DELETE }}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ item_form.produto.id_for_label }}">{{ item_form.produto.label }}</label>
+                            {{ item_form.produto }}
+                            {% for error in item_form.produto.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                         </div>
-                        
-                        <div class="row">
-                            <div class="col-12 mb-3">
-                                <label for="{{ form.observacoes.id_for_label }}" class="form-label">{{ form.observacoes.label }}</label>
-                                {{ form.observacoes }}
-                                {% if form.observacoes.errors %}
-                                    <div class="text-danger small">{{ form.observacoes.errors.0 }}</div>
-                                {% endif %}
-                            </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ item_form.fornecedor.id_for_label }}">{{ item_form.fornecedor.label }}</label>
+                            {{ item_form.fornecedor }}
+                            {% for error in item_form.fornecedor.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
                         </div>
-                        
-                        {% for hidden in form.hidden_fields %}
-                            {{ hidden }}
-                        {% endfor %}
                     </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3"><label for="{{ item_form.quantidade.id_for_label }}">{{ item_form.quantidade.label }}</label>{{ item_form.quantidade }}{% for error in item_form.quantidade.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}</div>
+                        <div class="col-md-3 mb-3"><label>Preço Base (R$)</label><input type="text" class="form-control calculated-field" id="id_preco_base_{{ forloop.counter0 }}" readonly></div>
+                        <div class="col-md-3 mb-3"><label for="{{ item_form.preco_cotado.id_for_label }}">{{ item_form.preco_cotado.label }}</label>{{ item_form.preco_cotado }}{% for error in item_form.preco_cotado.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}</div>
+                        <div class="col-md-3 mb-3"><label for="{{ item_form.observacoes.id_for_label }}">{{ item_form.observacoes.label }}</label>{{ item_form.observacoes }}{% for error in item_form.observacoes.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}</div>
+                    </div>
+                    {% for hidden in item_form.hidden_fields %}{% if "DELETE" not in hidden.name %}{{ hidden }}{% endif %}{% endfor %}
+                </div>
                 {% endfor %}
             </div>
-            
-            <div class="text-center mt-3">
-                <button type="button" class="btn add-item-btn" id="add-form">
-                    <i class="bi bi-plus-circle me-2"></i>Adicionar Item
-                </button>
-            </div>
+            <button type="button" class="btn btn-success" id="add-form">Adicionar Item</button>
         </div>
     </div>
 
-    <!-- Botões de Ação -->
-    <div class="form-section">
-        <div class="d-flex justify-content-between">
-            <a href="{% url 'encomenda_list' %}" class="btn btn-secondary">
-                <i class="bi bi-x-circle me-2"></i>Cancelar
-            </a>
-            
-            <div>
-                <button type="submit" class="btn btn-primary me-2">
-                    <i class="bi bi-check-circle me-2"></i>
-                    {% if encomenda %}Atualizar{% else %}Criar{% endif %} Encomenda
-                </button>
-                
-                {% if encomenda %}
-                <a href="{% url 'encomenda_detail' encomenda.pk %}" class="btn btn-info">
-                    <i class="bi bi-eye me-2"></i>Ver Detalhes
-                </a>
-                {% endif %}
-            </div>
-        </div>
+    <div class="mt-4 d-flex justify-content-between">
+        <a href="{% url 'encomenda_list' %}" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">Salvar Encomenda</button>
     </div>
 </form>
 
-<!-- Template para novos itens -->
 <div id="empty-form" style="display: none;">
-    <div class="item-form" data-form-index="__prefix__">
-        <button type="button" class="btn btn-danger btn-sm delete-btn delete-form" title="Remover Item">
-            <i class="bi bi-trash"></i>
-        </button>
-        
-        <div class="row">
-            <div class="col-md-4 mb-3 required-field">
-                <label class="form-label">Produto</label>
-                {{ formset.empty_form.produto }}
-            </div>
-            
-            <div class="col-md-4 mb-3 required-field">
-                <label class="form-label">Fornecedor</label>
-                {{ formset.empty_form.fornecedor }}
-            </div>
-            
-            <div class="col-md-2 mb-3 required-field">
-                <label class="form-label">Quantidade</label>
-                {{ formset.empty_form.quantidade }}
-            </div>
-            
-            <div class="col-md-2 mb-3 required-field">
-                <label class="form-label">Preço Cotado</label>
-                <div class="input-group">
-                    <span class="input-group-text">R$</span>
-                    {{ formset.empty_form.preco_cotado }}
-                </div>
-            </div>
-        </div>
-        
-        <div class="row">
-            <div class="col-12 mb-3">
-                <label class="form-label">Observações</label>
-                {{ formset.empty_form.observacoes }}
-            </div>
-        </div>
-        
-        {% for hidden in formset.empty_form.hidden_fields %}
-            {{ hidden }}
-        {% endfor %}
+    <div class="item-form border rounded p-3 mb-3 position-relative" id="item-__prefix__">
+        <button type="button" class="btn-close position-absolute top-0 end-0 p-2 delete-form" aria-label="Close"></button>
         {{ formset.empty_form.DELETE }}
+        <div class="row">
+            <div class="col-md-6 mb-3"><label for="id_itens-__prefix__-produto">Produto</label>{{ formset.empty_form.produto }}</div>
+            <div class="col-md-6 mb-3"><label for="id_itens-__prefix__-fornecedor">Fornecedor</label>{{ formset.empty_form.fornecedor }}</div>
+        </div>
+        <div class="row">
+            <div class="col-md-3 mb-3"><label for="id_itens-__prefix__-quantidade">Quantidade</label>{{ formset.empty_form.quantidade }}</div>
+            <div class="col-md-3 mb-3"><label>Preço Base (R$)</label><input type="text" class="form-control calculated-field" id="id_preco_base___prefix__" readonly></div>
+            <div class="col-md-3 mb-3"><label for="id_itens-__prefix__-preco_cotado">Preço Cotado</label>{{ formset.empty_form.preco_cotado }}</div>
+            <div class="col-md-3 mb-3"><label for="id_itens-__prefix__-observacoes">Observações</label>{{ formset.empty_form.observacoes }}</div>
+        </div>
+        {% for hidden in formset.empty_form.hidden_fields %}{% if "DELETE" not in hidden.name %}{{ hidden }}{% endif %}{% endfor %}
     </div>
 </div>
 {% endblock %}
@@ -340,129 +153,77 @@ document.addEventListener('DOMContentLoaded', function() {
     const formsetContainer = document.getElementById('formset-container');
     const addButton = document.getElementById('add-form');
     const totalFormsInput = document.getElementById('id_itens-TOTAL_FORMS');
-    
-    // Função para atualizar índices dos formulários
+    const emptyFormTemplate = document.getElementById('empty-form').innerHTML;
+
     function updateFormIndexes() {
-        const forms = formsetContainer.querySelectorAll('.item-form');
-        forms.forEach((form, index) => {
-            form.setAttribute('data-form-index', index);
-            
-            // Atualizar todos os campos do formulário
-            const inputs = form.querySelectorAll('input, select, textarea');
-            inputs.forEach(input => {
+        formsetContainer.querySelectorAll('.item-form').forEach((form, index) => {
+            form.id = `item-${index}`;
+            form.querySelectorAll('input, select, textarea').forEach(input => {
                 const name = input.getAttribute('name');
-                const id = input.getAttribute('id');
-                
                 if (name) {
-                    input.setAttribute('name', name.replace(/itens-\d+/, `itens-${index}`));
+                    input.name = name.replace(/-\d+-/, `-${index}-`);
                 }
+                const id = input.getAttribute('id');
                 if (id) {
-                    input.setAttribute('id', id.replace(/itens-\d+/, `itens-${index}`));
+                    input.id = id.replace(/_\d+_/, `_${index}_`).replace(/-\d+-/, `-${index}-`);
                 }
             });
-            
-            // Atualizar labels
-            const labels = form.querySelectorAll('label');
-            labels.forEach(label => {
+             form.querySelectorAll('label').forEach(label => {
                 const forAttr = label.getAttribute('for');
                 if (forAttr) {
-                    label.setAttribute('for', forAttr.replace(/itens-\d+/, `itens-${index}`));
+                    label.setAttribute('for', forAttr.replace(/-\d+-/, `-${index}-`));
                 }
             });
         });
-        
-        // Atualizar total de formulários
-        totalFormsInput.value = forms.length;
     }
     
-    // Adicionar novo formulário
-    addButton.addEventListener('click', function() {
-        const emptyForm = document.getElementById('empty-form');
-        const newForm = emptyForm.innerHTML;
-        const formCount = formsetContainer.children.length;
-        
-        const newFormHtml = newForm.replace(/__prefix__/g, formCount);
+    function addForm() {
+        let formCount = parseInt(totalFormsInput.value);
+        const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formCount);
         formsetContainer.insertAdjacentHTML('beforeend', newFormHtml);
-        
+        totalFormsInput.value = formCount + 1;
         updateFormIndexes();
-        
-        // Adicionar event listener para o botão de deletar
-        const newFormElement = formsetContainer.lastElementChild;
-        const deleteBtn = newFormElement.querySelector('.delete-form');
-        deleteBtn.addEventListener('click', function() {
-            deleteForm(newFormElement);
-        });
-    });
-    
-    // Função para deletar formulário
-    function deleteForm(formElement) {
-        const deleteInput = formElement.querySelector('input[name$="-DELETE"]');
-        
-        if (deleteInput) {
-            deleteInput.checked = true;
-            formElement.classList.add('to-delete');
-            formElement.style.display = 'none';
-        } else {
-            formElement.remove();
-            updateFormIndexes();
-        }
     }
-    
-    // Adicionar event listeners para botões de deletar existentes
-    document.querySelectorAll('.delete-form').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const formElement = this.closest('.item-form');
-            deleteForm(formElement);
-        });
-    });
-    
-    // Auto-preenchimento de preço baseado no produto selecionado
-    document.addEventListener('change', function(e) {
-        if (e.target.classList.contains('produto-select')) {
-            const produtoId = e.target.value;
-            if (produtoId) {
-                fetch(`/api/produto/${produtoId}/`)
-                    .then(response => response.json())
-                    .then(data => {
-                        const formElement = e.target.closest('.item-form');
-                        const precoInput = formElement.querySelector('input[name$="-preco_cotado"]');
-                        if (precoInput && data.preco_base) {
-                            precoInput.value = data.preco_base;
-                        }
-                    })
-                    .catch(error => console.error('Erro ao buscar dados do produto:', error));
+
+    addButton.addEventListener('click', addForm);
+
+    formsetContainer.addEventListener('click', function(e) {
+        if (e.target && e.target.classList.contains('delete-form')) {
+            const formElement = e.target.closest('.item-form');
+            const deleteInput = formElement.querySelector('input[name$="-DELETE"]');
+            if (deleteInput) {
+                deleteInput.checked = true;
+                formElement.style.display = 'none';
             }
         }
     });
-    
-    // Validação do formulário
-    document.getElementById('encomendaForm').addEventListener('submit', function(e) {
-        const visibleForms = formsetContainer.querySelectorAll('.item-form:not(.to-delete):not([style*="display: none"])');
-        
-        if (visibleForms.length === 0) {
-            e.preventDefault();
-            alert('É necessário adicionar pelo menos um item à encomenda.');
-            return false;
-        }
-        
-        // Validar campos obrigatórios dos itens visíveis
-        let hasErrors = false;
-        visibleForms.forEach(form => {
-            const requiredFields = form.querySelectorAll('.required-field input, .required-field select');
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    field.classList.add('is-invalid');
-                    hasErrors = true;
-                } else {
-                    field.classList.remove('is-invalid');
-                }
-            });
-        });
-        
-        if (hasErrors) {
-            e.preventDefault();
-            alert('Por favor, preencha todos os campos obrigatórios.');
-            return false;
+
+    document.body.addEventListener('change', function(e) {
+        if (e.target && e.target.classList.contains('produto-select')) {
+            const produtoId = e.target.value;
+            const formElement = e.target.closest('.item-form');
+            const formIndex = formElement.id.split('-')[1];
+            
+            const precoBaseInput = document.getElementById(`id_preco_base_${formIndex}`);
+            const precoCotadoInput = document.getElementById(`id_itens-${formIndex}-preco_cotado`);
+
+            if (produtoId && precoBaseInput) {
+                fetch(`/api/produto/${produtoId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.preco_base) {
+                            precoBaseInput.value = parseFloat(data.preco_base).toFixed(2);
+                            if (precoCotadoInput) {
+                                precoCotadoInput.value = '';
+                                precoCotadoInput.placeholder = 'Preencha o valor';
+                            }
+                        }
+                    })
+                    .catch(error => console.error('Erro:', error));
+            } else if (precoBaseInput) {
+                precoBaseInput.value = '';
+                if (precoCotadoInput) precoCotadoInput.value = '';
+            }
         }
     });
 });

@@ -5,22 +5,33 @@ from django.utils import timezone
 from decimal import Decimal
 from django.conf import settings
 
+# --- Modelos de Autenticação e Equipe ---
+class Equipe(models.Model):
+    nome = models.CharField(max_length=100, unique=True, help_text="Nome da empresa ou equipe (ex: Drogaria Benfica - Centro)")
+    created_at = models.DateTimeField(auto_now_add=True)
+    def __str__(self): return self.nome
+
 class CustomUser(AbstractUser):
     nome_completo = models.CharField(max_length=255, blank=True, verbose_name="Nome Completo")
     cargo = models.CharField(max_length=100, blank=True, verbose_name="Cargo")
     identificacao = models.CharField(max_length=100, blank=True, verbose_name="Identificação")
+    equipe = models.ForeignKey(Equipe, on_delete=models.SET_NULL, null=True, blank=True, related_name="membros")
+    def __str__(self): return self.username
 
-    def __str__(self):
-        return self.username
-
+# --- Modelos Principais da Aplicação ---
 class Cliente(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    equipe = models.ForeignKey(Equipe, on_delete=models.CASCADE, related_name="clientes")
     nome = models.CharField(max_length=200, verbose_name="Nome do Cliente")
-    codigo = models.CharField(max_length=50, unique=True, verbose_name="Código")
-    endereco = models.TextField(verbose_name="Endereço")
-    bairro = models.CharField(max_length=100, verbose_name="Bairro")
-    referencia = models.CharField(max_length=200, blank=True, verbose_name="Referência")
+    cpf = models.CharField(max_length=14, blank=True, verbose_name="CPF")
     telefone = models.CharField(max_length=20, blank=True, verbose_name="Telefone")
+    
+    # Endereço completo (com campos opcionais)
+    rua = models.CharField(max_length=255, blank=True, verbose_name="Rua / Logradouro")
+    numero = models.CharField(max_length=20, blank=True, verbose_name="Número")
+    complemento = models.CharField(max_length=100, blank=True, verbose_name="Complemento")
+    bairro = models.CharField(max_length=100, blank=True, verbose_name="Bairro")
+    referencia = models.CharField(max_length=200, blank=True, verbose_name="Ponto de Referência")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -30,177 +41,77 @@ class Cliente(models.Model):
         ordering = ['nome']
 
     def __str__(self):
-        return f"{self.codigo} - {self.nome}"
-
+        return self.nome
 
 class Fornecedor(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    equipe = models.ForeignKey(Equipe, on_delete=models.CASCADE, related_name="fornecedores")
     nome = models.CharField(max_length=200, verbose_name="Nome do Fornecedor")
-    codigo = models.CharField(max_length=50, unique=True, verbose_name="Código")
+    codigo = models.CharField(max_length=50, verbose_name="Código")
     contato = models.CharField(max_length=200, blank=True, verbose_name="Contato")
     telefone = models.CharField(max_length=20, blank=True, verbose_name="Telefone")
     email = models.EmailField(blank=True, verbose_name="E-mail")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     class Meta:
-        verbose_name = "Fornecedor"
-        verbose_name_plural = "Fornecedores"
-        ordering = ['nome']
-
-    def __str__(self):
-        return f"{self.codigo} - {self.nome}"
-
+        unique_together = ('equipe', 'codigo')
+    def __str__(self): return self.nome
 
 class Produto(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    equipe = models.ForeignKey(Equipe, on_delete=models.CASCADE, related_name="produtos")
     nome = models.CharField(max_length=200, verbose_name="Nome do Produto")
-    codigo = models.CharField(max_length=50, unique=True, verbose_name="Código")
+    codigo = models.CharField(max_length=50, verbose_name="Código")
     descricao = models.TextField(blank=True, verbose_name="Descrição")
-    preco_base = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        validators=[MinValueValidator(Decimal('0.01'))],
-        verbose_name="Preço Base"
-    )
+    preco_base = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))], verbose_name="Preço Base")
     categoria = models.CharField(max_length=100, blank=True, verbose_name="Categoria")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     class Meta:
-        verbose_name = "Produto"
-        verbose_name_plural = "Produtos"
-        ordering = ['nome']
-
-    def __str__(self):
-        return f"{self.codigo} - {self.nome}"
-
+        unique_together = ('equipe', 'codigo')
+    def __str__(self): return self.nome
 
 class Encomenda(models.Model):
     STATUS_CHOICES = [
-        ('criada', 'Criada'),
-        ('cotacao', 'Em Cotação'),
-        ('aprovada', 'Aprovada'),
-        ('em_andamento', 'Em Andamento'),
-        ('pronta', 'Pronta para Entrega'),
-        ('entregue', 'Entregue'),
+        ('criada', 'Criada'), ('cotacao', 'Em Cotação'), ('aprovada', 'Aprovada'),
+        ('em_andamento', 'Em Andamento'), ('pronta', 'Pronta para Entrega'), ('entregue', 'Entregue'),
         ('cancelada', 'Cancelada'),
     ]
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    equipe = models.ForeignKey(Equipe, on_delete=models.CASCADE, related_name="encomendas")
     numero_encomenda = models.AutoField(primary_key=True, verbose_name="Número da Encomenda")
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, verbose_name="Cliente")
-    
-    data_criacao = models.DateTimeField(auto_now_add=True, verbose_name="Data de Criação (sistema)")
-    data_encomenda = models.DateField(verbose_name="Data", help_text="Data da encomenda (campo do cabeçalho)", default=timezone.now)
-    responsavel_criacao = models.CharField(max_length=100, verbose_name="Responsável", 
-                                         help_text="Responsável pela criação da encomenda")
-    
+    responsavel_criacao = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Responsável pelo Pedido")
+    data_encomenda = models.DateTimeField(default=timezone.now, verbose_name="Data do Pedido")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='criada', verbose_name="Status")
-    observacoes = models.TextField(blank=True, verbose_name="Observação", 
-                                 help_text="Campo 'Observação' do formulário físico")
-    
-    valor_total = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2, 
-        default=Decimal('0.00'),
-        verbose_name="Valor do Produto",
-        help_text="Valor total dos produtos da encomenda"
-    )
-    
+    valor_pago_adiantamento = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Valor de Adiantamento")
+    data_prevista_entrega = models.DateField(null=True, blank=True, verbose_name="Data Prevista para Entrega")
+    observacoes = models.TextField(blank=True, verbose_name="Observações Gerais")
+    valor_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Valor Total dos Itens")
     updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        verbose_name = "Encomenda"
-        verbose_name_plural = "Encomendas"
-        ordering = ['-numero_encomenda']
-
-    def __str__(self):
-        return f"Encomenda {self.numero_encomenda} - {self.cliente.nome}"
-
+    class Meta: ordering = ['-numero_encomenda']
+    def __str__(self): return f"Encomenda #{self.numero_encomenda} - {self.cliente.nome}"
     def calcular_valor_total(self):
-        total = sum(item.valor_total for item in self.itens.all())
-        self.valor_total = total
+        self.valor_total = sum(item.valor_total for item in self.itens.all()) if self.itens.exists() else Decimal('0.00')
         self.save()
-        return total
-
 
 class ItemEncomenda(models.Model):
     encomenda = models.ForeignKey(Encomenda, related_name='itens', on_delete=models.CASCADE)
     produto = models.ForeignKey(Produto, on_delete=models.CASCADE, verbose_name="Produto")
     fornecedor = models.ForeignKey(Fornecedor, on_delete=models.CASCADE, verbose_name="Fornecedor")
     quantidade = models.PositiveIntegerField(default=1, verbose_name="Quantidade")
-    preco_cotado = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal('0.01'))],
-        verbose_name="Preço Cotado"
-    )
-    valor_total = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2,
-        default=Decimal('0.00'),
-        verbose_name="Valor Total"
-    )
+    preco_cotado = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))], verbose_name="Preço Cotado")
+    valor_total = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'), verbose_name="Valor Total")
     observacoes = models.TextField(blank=True, verbose_name="Observações")
-
-    class Meta:
-        verbose_name = "Item da Encomenda"
-        verbose_name_plural = "Itens da Encomenda"
-
     def save(self, *args, **kwargs):
         self.valor_total = self.quantidade * self.preco_cotado
         super().save(*args, **kwargs)
-        self.encomenda.calcular_valor_total()
-
-    def __str__(self):
-        return f"{self.produto.nome} - Qtd: {self.quantidade}"
-
+    def __str__(self): return f"{self.produto.nome} - Qtd: {self.quantidade}"
 
 class Entrega(models.Model):
     encomenda = models.OneToOneField(Encomenda, on_delete=models.CASCADE, verbose_name="Encomenda")
-    
-    data_entrega = models.DateField(verbose_name="Data Entrega", 
-                                  help_text="Campo 'Data Entrega' do formulário físico",
-                                  default=timezone.now)
-    responsavel_entrega = models.CharField(max_length=100, verbose_name="Responsável Entrega",
-                                         help_text="Campo 'Responsável Entrega' do formulário físico",
-                                         default="A definir")
-    
-    valor_pago_adiantamento = models.DecimalField(
-        max_digits=10, 
-        decimal_places=2,
-        default=Decimal('0.00'),
-        validators=[MinValueValidator(Decimal('0.00'))],
-        verbose_name="Valor Pago Adiantamento",
-        help_text="Campo 'Valor Pago Adiantamento' do formulário físico"
-    )
-    
-    data_entrega_realizada = models.DateField(null=True, blank=True, verbose_name="Data",
-                                            help_text="Data da entrega realizada (seção inferior)")
-    hora_entrega = models.TimeField(null=True, blank=True, verbose_name="Hora",
-                                  help_text="Hora da entrega (seção inferior)")
-    entregue_por = models.CharField(max_length=100, blank=True, verbose_name="Entregue por",
-                                  help_text="Campo 'Entregue por' da seção inferior")
-    
-    assinatura_cliente = models.TextField(blank=True, verbose_name="Ass. do Cliente",
-                                        help_text="Campo para assinatura do cliente")
-    
-    data_prevista = models.DateField(null=True, blank=True, verbose_name="Data Prevista (controle)")
-    data_realizada = models.DateTimeField(null=True, blank=True, verbose_name="Data/Hora Realizada (controle)")
-    observacoes_entrega = models.TextField(blank=True, verbose_name="Observações da Entrega")
-
-    class Meta:
-        verbose_name = "Entrega"
-        verbose_name_plural = "Entregas"
-
-    def __str__(self):
-        return f"Entrega - Encomenda {self.encomenda.numero_encomenda}"
-
-    @property
-    def valor_restante(self):
-        return self.encomenda.valor_total - self.valor_pago_adiantamento
-    
-    @property
-    def valor_adiantamento(self):
-        return self.valor_pago_adiantamento
+    responsavel_entrega = models.CharField(max_length=100, blank=True, verbose_name="Responsável pela Entrega")
+    data_entrega_realizada = models.DateField(null=True, blank=True, verbose_name="Data da Entrega")
+    hora_entrega = models.TimeField(null=True, blank=True, verbose_name="Hora da Entrega")
+    entregue_por = models.CharField(max_length=100, blank=True, verbose_name="Entregue por")
+    assinatura_cliente = models.TextField(blank=True, verbose_name="Assinatura/Recebedor")
+    def __str__(self): return f"Entrega da Encomenda #{self.encomenda.numero_encomenda}"

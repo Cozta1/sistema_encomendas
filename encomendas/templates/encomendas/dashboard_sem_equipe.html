@@ -1,0 +1,25 @@
+{% extends 'encomendas/base.html' %}
+
+{% block title %}Bem-vindo - Sistema de Encomendas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><i class="bi bi-people-fill me-3"></i>Bem-vindo ao Sistema de Encomendas</h1>
+    <p class="mb-0">Sua conta não está associada a nenhuma equipe.</p>
+</div>
+
+<div class="card">
+    <div class="card-body text-center">
+        <h5 class="card-title">O que fazer agora?</h5>
+        <p class="card-text">
+            Como administrador, você pode gerenciar as equipes e usuários através do painel de administração.
+        </p>
+        <a href="{% url 'admin:index' %}" class="btn btn-primary">
+            <i class="bi bi-gear-fill me-2"></i>Aceder ao Painel de Administração
+        </a>
+        <p class="mt-3 text-muted">
+            Usuários normais devem ser criados e associados a uma equipe por um administrador.
+        </p>
+    </div>
+</div>
+{% endblock %}
