@@ -10,32 +10,12 @@
         border-radius: 12px;
         padding: 30px;
         margin-bottom: 30px;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .encomenda-header::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 200%;
-        height: 200%;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
-        animation: float 20s infinite linear;
-    }
-    
-    @keyframes float {
-        0% { transform: translateX(0) translateY(0); }
-        100% { transform: translateX(-50px) translateY(-50px); }
     }
     
     .formulario-fisico {
         background: white;
-        border: 3px solid #333;
-        border-radius: 8px;
-        padding: 30px;
-        margin: 20px 0;
+        border: 2px solid #333;
+        padding: 20px;
         font-family: 'Courier New', monospace;
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         position: relative;
@@ -44,105 +24,78 @@
     .formulario-header {
         text-align: center;
         border-bottom: 2px solid #333;
-        padding-bottom: 15px;
-        margin-bottom: 20px;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
     }
     
     .logo-area {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
     }
     
     .numero-encomenda {
         border: 2px solid #333;
-        padding: 10px;
-        text-align: center;
-        font-size: 1.2em;
+        padding: 8px 12px;
+        font-size: 1.4em;
         font-weight: bold;
-        background: #f8f9fa;
     }
     
     .campo-formulario {
-        margin-bottom: 15px;
         display: flex;
-        align-items: center;
-        border-bottom: 1px solid #666;
-        padding-bottom: 5px;
+        align-items: flex-end;
+        border-bottom: 1px dotted #666;
+        padding-bottom: 3px;
+        margin-bottom: 12px;
+        min-height: 28px;
     }
     
     .campo-label {
         font-weight: bold;
-        margin-right: 10px;
-        min-width: 120px;
+        margin-right: 8px;
+        white-space: nowrap;
     }
     
     .campo-valor {
         flex: 1;
-        padding: 2px 5px;
-        background: transparent;
-        border: none;
         font-family: inherit;
+        font-size: 0.95em;
     }
     
-    .secao-entrega {
+    .secao-destaque {
         border: 2px solid #333;
         padding: 15px;
         margin-top: 20px;
-        background: #f8f9fa;
     }
     
     .tabela-itens {
         width: 100%;
         border-collapse: collapse;
         margin: 20px 0;
+        font-size: 0.9em;
     }
     
     .tabela-itens th,
     .tabela-itens td {
         border: 1px solid #333;
-        padding: 8px;
+        padding: 6px;
         text-align: left;
     }
     
     .tabela-itens th {
         background: #e9ecef;
-        font-weight: bold;
-    }
-    
-    .status-atual {
-        display: inline-block;
-        padding: 8px 16px;
-        border-radius: 20px;
-        font-weight: bold;
-        text-transform: uppercase;
-        font-size: 0.9em;
-    }
-    
-    .print-only {
-        display: none;
     }
     
     @media print {
         .no-print { display: none !important; }
-        .print-only { display: block !important; }
+        body { background: white !important; -webkit-print-color-adjust: exact; }
         .formulario-fisico { 
             border: 2px solid #000 !important;
             box-shadow: none !important;
             page-break-inside: avoid;
         }
-        body { background: white !important; }
-    }
-    
-    .action-buttons {
-        position: sticky;
-        top: 20px;
-        z-index: 100;
-        background: white;
-        padding: 15px;
-        border-radius: 12px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        .main-content { padding: 0 !important; }
     }
 </style>
 {% endblock %}
@@ -153,12 +106,12 @@
         <div class="d-flex justify-content-between align-items-center">
             <div>
                 <h1><i class="bi bi-clipboard-data me-3"></i>Encomenda #{{ encomenda.numero_encomenda }}</h1>
-                <p class="mb-0">{{ encomenda.cliente.nome }} - {{ encomenda.get_status_display }}</p>
+                <p class="mb-0">{{ encomenda.cliente.nome }}</p>
             </div>
             <div class="text-end">
-                <div class="status-atual status-{{ encomenda.status }}">
+                <span class="status-badge status-{{ encomenda.status }}">
                     {{ encomenda.get_status_display }}
-                </div>
+                </span>
                 <div class="mt-2">
                     <small>Criada em {{ encomenda.data_criacao|date:"d/m/Y H:i" }}</small>
                 </div>
@@ -167,395 +120,125 @@
     </div>
 </div>
 
-<!-- Botões de Ação -->
-<div class="action-buttons no-print mb-4">
-    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
-        <div class="d-flex flex-wrap gap-2">
-            <a href="{% url 'encomenda_list' %}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left me-2"></i>Voltar
-            </a>
-            <a href="{% url 'encomenda_edit' encomenda.pk %}" class="btn btn-primary">
-                <i class="bi bi-pencil me-2"></i>Editar
-            </a>
-            {% if not entrega %}
-            <a href="{% url 'entrega_create' encomenda.pk %}" class="btn btn-success">
-                <i class="bi bi-truck me-2"></i>Programar Entrega
-            </a>
-            {% else %}
-            <a href="{% url 'entrega_edit' entrega.pk %}" class="btn btn-info">
-                <i class="bi bi-truck me-2"></i>Editar Entrega
-            </a>
-            {% endif %}
-        </div>
-        
-        <div class="d-flex flex-wrap gap-2">
-            <button onclick="window.print()" class="btn btn-outline-primary">
-                <i class="bi bi-printer me-2"></i>Imprimir
-            </button>
-            <div class="dropdown">
-                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-gear me-2"></i>Status
-                </button>
-                <ul class="dropdown-menu">
-                    {% for status_code, status_name in encomenda.STATUS_CHOICES %}
-                    <li>
-                        <a class="dropdown-item {% if status_code == encomenda.status %}active{% endif %}" 
-                           href="#" onclick="updateStatus('{{ status_code }}')">
-                            {{ status_name }}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
+<div class="card no-print mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'encomenda_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Voltar para Lista
+                </a>
+                <a href="{% url 'encomenda_edit' encomenda.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil me-2"></i>Editar Encomenda
+                </a>
             </div>
-            <a href="{% url 'encomenda_delete' encomenda.pk %}" class="btn btn-outline-danger">
-                <i class="bi bi-trash me-2"></i>Excluir
-            </a>
+            <div class="d-flex flex-wrap gap-2">
+                {% if not entrega %}
+                <a href="{% url 'entrega_create' encomenda.pk %}" class="btn btn-success">
+                    <i class="bi bi-truck me-2"></i>Programar Entrega
+                </a>
+                {% else %}
+                <a href="{% url 'entrega_edit' entrega.pk %}" class="btn btn-info">
+                    <i class="bi bi-truck me-2"></i>Ver / Editar Entrega
+                </a>
+                {% endif %}
+                <button onclick="window.print()" class="btn btn-outline-primary">
+                    <i class="bi bi-printer me-2"></i>Imprimir
+                </button>
+                <a href="{% url 'encomenda_delete' encomenda.pk %}" class="btn btn-outline-danger">
+                    <i class="bi bi-trash me-2"></i>Excluir
+                </a>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Formulário Físico Simulado -->
 <div class="formulario-fisico">
-    <!-- Cabeçalho -->
     <div class="formulario-header">
         <div class="logo-area">
             <div>
-                <h3 style="margin: 0; color: #333;">
-                    <span style="background: #333; color: white; padding: 5px 10px; border-radius: 5px;">
-                        BLOCO DE ENCOMENDAS
-                    </span>
-                </h3>
-                <h2 style="margin: 5px 0; color: #2c5aa0;">
-                    <strong>+B</strong> DROGARIA Benfica
-                </h2>
-                <p style="margin: 0; font-size: 0.9em;">Entrega em toda Juiz de Fora</p>
-                <p style="margin: 0; font-size: 0.8em;">📞 32 99994-3178 📞 32 3112-3999 | 3272-8532</p>
+                <h4 style="margin: 0; background: #333; color: white; padding: 2px 5px; display: inline-block;">BLOCO DE ENCOMENDAS</h4>
+                <h3 style="margin: 5px 0; color: #2c5aa0;"><strong>+B</strong> DROGARIA Benfica</h3>
+                <p style="margin: 0; font-size: 0.8em;">Entrega em toda Juiz de Fora</p>
+                <p style="margin: 0; font-size: 0.7em;">📞 32 99994-3178 📞 32 3112-3999 | 3272-8532</p>
             </div>
-            <div class="numero-encomenda">
-                {{ encomenda.numero_encomenda }}
-            </div>
+            <div class="numero-encomenda">{{ encomenda.numero_encomenda }}</div>
         </div>
-        
-        <div style="display: flex; justify-content: space-between; margin-top: 15px;">
-            <div class="campo-formulario" style="border: none; width: 200px;">
+        <div style="display: flex; justify-content: space-between;">
+            <div class="campo-formulario" style="border:none; width: 45%;">
                 <span class="campo-label">Data:</span>
-                <span class="campo-valor">{{ encomenda.data_criacao|date:"d/m/Y" }}</span>
+                <span class="campo-valor">{{ encomenda.data_encomenda|date:"d/m/Y" }}</span>
             </div>
-            <div class="campo-formulario" style="border: none; width: 200px;">
+            <div class="campo-formulario" style="border:none; width: 50%;">
                 <span class="campo-label">Responsável:</span>
                 <span class="campo-valor">{{ encomenda.responsavel_criacao }}</span>
             </div>
         </div>
     </div>
+
+    <table class="tabela-itens">
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th>Cód.</th>
+                <th>Fornecedor</th>
+                <th>Qtd</th>
+                <th>Preço Cotado</th>
+                <th>Total Item</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in itens %}
+            <tr>
+                <td>{{ item.produto.nome }}</td>
+                <td>{{ item.produto.codigo }}</td>
+                <td>{{ item.fornecedor.nome }}</td>
+                <td style="text-align: center;">{{ item.quantidade }}</td>
+                <td>R$ {{ item.preco_cotado|floatformat:2 }}</td>
+                <td>R$ {{ item.valor_total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">Nenhum item nesta encomenda.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
     
-    <!-- Informações do Cliente e Produtos -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-        <div>
-            <div class="campo-formulario">
-                <span class="campo-label">Produto:</span>
-                <span class="campo-valor">
-                    {% for item in itens %}
-                        {{ item.produto.nome }}{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
-                </span>
-            </div>
-            
-            <div class="campo-formulario">
-                <span class="campo-label">Fornecedor Cotado:</span>
-                <span class="campo-valor">
-                    {% for item in itens %}
-                        {{ item.fornecedor.nome }}{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
-                </span>
-            </div>
-        </div>
-        
-        <div>
-            <div class="campo-formulario">
-                <span class="campo-label">Código:</span>
-                <span class="campo-valor">
-                    {% for item in itens %}
-                        {{ item.produto.codigo }}{% if not forloop.last %}, {% endif %}
-                    {% endfor %}
-                </span>
-            </div>
-            
-            <div class="campo-formulario">
-                <span class="campo-label">Preço:</span>
-                <span class="campo-valor">R$ {{ encomenda.valor_total|floatformat:2 }}</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Dados do Cliente -->
-    <div class="campo-formulario">
-        <span class="campo-label">Nome do Cliente:</span>
-        <span class="campo-valor">{{ encomenda.cliente.nome }}</span>
-    </div>
-    
-    <div class="campo-formulario">
-        <span class="campo-label">Código:</span>
-        <span class="campo-valor">{{ encomenda.cliente.codigo }}</span>
-    </div>
-    
-    <div class="campo-formulario">
-        <span class="campo-label">End.:</span>
-        <span class="campo-valor">{{ encomenda.cliente.endereco }}</span>
-    </div>
-    
+    <div class="campo-formulario"><span class="campo-label">Nome do Cliente:</span><span class="campo-valor">{{ encomenda.cliente.nome }}</span></div>
+    <div class="campo-formulario"><span class="campo-label">Código:</span><span class="campo-valor">{{ encomenda.cliente.codigo }}</span></div>
+    <div class="campo-formulario"><span class="campo-label">End.:</span><span class="campo-valor">{{ encomenda.cliente.endereco }}</span></div>
     <div style="display: flex; gap: 20px;">
-        <div class="campo-formulario" style="flex: 1;">
-            <span class="campo-label">Bairro:</span>
-            <span class="campo-valor">{{ encomenda.cliente.bairro }}</span>
-        </div>
-        <div class="campo-formulario" style="flex: 1;">
-            <span class="campo-label">Referência:</span>
-            <span class="campo-valor">{{ encomenda.cliente.referencia|default:"" }}</span>
-        </div>
+        <div class="campo-formulario" style="flex: 1;"><span class="campo-label">Bairro:</span><span class="campo-valor">{{ encomenda.cliente.bairro }}</span></div>
+        <div class="campo-formulario" style="flex: 1;"><span class="campo-label">Referência:</span><span class="campo-valor">{{ encomenda.cliente.referencia|default:"" }}</span></div>
     </div>
     
-    {% if entrega %}
-    <div class="campo-formulario">
-        <span class="campo-label">Valor Pago Adiantamento:</span>
-        <span class="campo-valor">R$ {{ entrega.valor_adiantamento|floatformat:2 }}</span>
-    </div>
+    <div class="campo-formulario"><span class="campo-label">Valor Pago Adiantamento:</span><span class="campo-valor">{% if entrega %}R$ {{ entrega.valor_pago_adiantamento|floatformat:2 }}{% endif %}</span></div>
+    <div class="campo-formulario"><span class="campo-label">Data Entrega:</span><span class="campo-valor">{% if entrega %}{{ entrega.data_entrega|date:"d / m / Y" }}{% endif %}</span></div>
+    <div class="campo-formulario"><span class="campo-label">Observação:</span><span class="campo-valor">{{ encomenda.observacoes|default:"" }}</span></div>
     
+    <div class="campo-formulario"><span class="campo-label">Responsável Entrega:</span><span class="campo-valor">{{ entrega.responsavel_entrega|default:"" }}</span></div>
     <div style="display: flex; gap: 20px;">
-        <div class="campo-formulario" style="flex: 1;">
-            <span class="campo-label">Data Entrega:</span>
-            <span class="campo-valor">{{ entrega.data_prevista|date:"d/m/Y" }}</span>
-        </div>
-        <div class="campo-formulario" style="flex: 1;">
-            <span class="campo-label">Observação:</span>
-            <span class="campo-valor">{{ encomenda.observacoes|default:"" }}</span>
-        </div>
+        <div class="campo-formulario" style="flex: 1;"><span class="campo-label">Data:</span><span class="campo-valor">{% if entrega.data_entrega_realizada %}{{ entrega.data_entrega_realizada|date:"d / m / Y" }}{% endif %}</span></div>
+        <div class="campo-formulario" style="flex: 1;"><span class="campo-label">Hora:</span><span class="campo-valor">{% if entrega.hora_entrega %}{{ entrega.hora_entrega|time:"H:i" }}{% endif %}</span></div>
     </div>
-    
-    <div style="display: flex; gap: 20px; margin: 20px 0;">
-        <div class="campo-formulario" style="flex: 1;">
-            <span class="campo-label">Responsável Entrega:</span>
-            <span class="campo-valor">{{ entrega.responsavel }}</span>
-        </div>
-        <div class="campo-formulario" style="flex: 1;">
-            <span class="campo-label">Data:</span>
-            <span class="campo-valor">
-                {% if entrega.data_realizada %}
-                    {{ entrega.data_realizada|date:"d/m/Y" }}
-                {% else %}
-                    {{ entrega.data_prevista|date:"d/m/Y" }}
-                {% endif %}
-            </span>
-        </div>
-        <div class="campo-formulario" style="flex: 1;">
-            <span class="campo-label">Hora:</span>
-            <span class="campo-valor">
-                {% if entrega.data_realizada %}
-                    {{ entrega.data_realizada|time:"H:i" }}
-                {% elif entrega.hora_prevista %}
-                    {{ entrega.hora_prevista }}
-                {% endif %}
-            </span>
-        </div>
-    </div>
-    
-    <div class="campo-formulario">
-        <span class="campo-label">Ass. do Cliente:</span>
-        <span class="campo-valor">
-            {% if entrega.assinatura_cliente %}✓ Assinado{% else %}Pendente{% endif %}
-        </span>
-    </div>
-    {% endif %}
-    
-    <!-- Seção de Entrega Destacada -->
-    <div class="secao-entrega">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h4 style="margin: 0;">{{ encomenda.numero_encomenda }}</h4>
-        </div>
-        
-        <div class="campo-formulario">
-            <span class="campo-label">Responsável pela Encomenda:</span>
-            <span class="campo-valor">{{ encomenda.responsavel_criacao }}</span>
-        </div>
-        
-        {% if entrega %}
-        <div class="campo-formulario">
-            <span class="campo-label">Valor do Adiantamento:</span>
-            <span class="campo-valor">R$ {{ entrega.valor_adiantamento|floatformat:2 }}</span>
-        </div>
-        
-        <div style="display: flex; gap: 20px;">
-            <div class="campo-formulario" style="flex: 1;">
-                <span class="campo-label">Data:</span>
-                <span class="campo-valor">
-                    {% if entrega.data_realizada %}
-                        {{ entrega.data_realizada|date:"d/m/Y" }}
-                    {% else %}
-                        {{ entrega.data_prevista|date:"d/m/Y" }}
-                    {% endif %}
-                </span>
+    <div class="campo-formulario" style="height: 40px;"><span class="campo-label">Ass. do Cliente:</span><span class="campo-valor">{{ entrega.assinatura_cliente|default:"" }}</span></div>
+
+    <div class="secao-destaque">
+        <div style="display:flex; justify-content: space-between; align-items:flex-start; margin-bottom: 10px;">
+            <div style="flex:1;">
+                <div class="campo-formulario"><span class="campo-label">Responsável pela Encomenda:</span><span class="campo-valor">{{ encomenda.responsavel_criacao }}</span></div>
+                <div class="campo-formulario"><span class="campo-label">Valor do Adiantamento:</span><span class="campo-valor">{% if entrega %}R$ {{ entrega.valor_pago_adiantamento|floatformat:2 }}{% endif %}</span></div>
+                <div style="display: flex; gap: 20px;">
+                    <div class="campo-formulario" style="flex: 1;"><span class="campo-label">Data:</span><span class="campo-valor">{% if entrega.data_entrega_realizada %}{{ entrega.data_entrega_realizada|date:"d/m/Y" }}{% endif %}</span></div>
+                    <div class="campo-formulario" style="flex: 1;"><span class="campo-label">Hora:</span><span class="campo-valor">{% if entrega.hora_entrega %}{{ entrega.hora_entrega|time:"H:i" }}{% endif %}</span></div>
+                </div>
+                <div class="campo-formulario"><span class="campo-label">Valor do Produto:</span><span class="campo-valor">R$ {{ encomenda.valor_total|floatformat:2 }}</span></div>
+                <div class="campo-formulario"><span class="campo-label">Entregue por:</span><span class="campo-valor">{{ entrega.entregue_por|default:"" }}</span></div>
             </div>
-            <div class="campo-formulario" style="flex: 1;">
-                <span class="campo-label">Hora:</span>
-                <span class="campo-valor">
-                    {% if entrega.data_realizada %}
-                        {{ entrega.data_realizada|time:"H:i" }}
-                    {% elif entrega.hora_prevista %}
-                        {{ entrega.hora_prevista }}
-                    {% endif %}
-                </span>
-            </div>
+            <div class="numero-encomenda" style="margin-left: 20px; color: red; border-color: red;">{{ encomenda.numero_encomenda }}</div>
         </div>
-        
-        <div class="campo-formulario">
-            <span class="campo-label">Valor do Produto:</span>
-            <span class="campo-valor">R$ {{ encomenda.valor_total|floatformat:2 }}</span>
-        </div>
-        
-        <div class="campo-formulario">
-            <span class="campo-label">Entregue por:</span>
-            <span class="campo-valor">{{ entrega.entregue_por|default:"" }}</span>
-        </div>
-        {% endif %}
     </div>
-    
-    <div style="text-align: right; margin-top: 20px; font-size: 0.8em;">
+
+    <div style="text-align: right; margin-top: 10px; font-size: 0.7em;">
         1001 Artes Gráficas (32) 3261-1001
     </div>
 </div>
-
-<!-- Detalhes dos Itens (apenas na tela) -->
-<div class="no-print">
-    {% if itens %}
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-box me-2"></i>Itens da Encomenda</h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Produto</th>
-                            <th>Fornecedor</th>
-                            <th>Quantidade</th>
-                            <th>Preço Unitário</th>
-                            <th>Total</th>
-                            <th>Observações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in itens %}
-                        <tr>
-                            <td>
-                                <strong>{{ item.produto.nome }}</strong><br>
-                                <small class="text-muted">{{ item.produto.codigo }}</small>
-                            </td>
-                            <td>
-                                <strong>{{ item.fornecedor.nome }}</strong><br>
-                                <small class="text-muted">{{ item.fornecedor.codigo }}</small>
-                            </td>
-                            <td class="text-center">{{ item.quantidade }}</td>
-                            <td>R$ {{ item.preco_cotado|floatformat:2 }}</td>
-                            <td><strong>R$ {{ item.valor_total|floatformat:2 }}</strong></td>
-                            <td>{{ item.observacoes|default:"-" }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot>
-                        <tr class="table-primary">
-                            <th colspan="4" class="text-end">Total Geral:</th>
-                            <th>R$ {{ encomenda.valor_total|floatformat:2 }}</th>
-                            <th></th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    
-    <!-- Informações de Entrega -->
-    {% if entrega %}
-    <div class="card mt-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-truck me-2"></i>Informações de Entrega</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <p><strong>Data Prevista:</strong> {{ entrega.data_prevista|date:"d/m/Y" }}</p>
-                    <p><strong>Responsável:</strong> {{ entrega.responsavel }}</p>
-                    <p><strong>Valor Adiantamento:</strong> R$ {{ entrega.valor_adiantamento|floatformat:2 }}</p>
-                    <p><strong>Valor Restante:</strong> R$ {{ entrega.valor_restante|floatformat:2 }}</p>
-                </div>
-                <div class="col-md-6">
-                    {% if entrega.data_realizada %}
-                    <p><strong>Data Realizada:</strong> {{ entrega.data_realizada|date:"d/m/Y H:i" }}</p>
-                    <p><strong>Entregue por:</strong> {{ entrega.entregue_por }}</p>
-                    <p><strong>Cliente Assinou:</strong> 
-                        {% if entrega.assinatura_cliente %}
-                            <span class="text-success">✓ Sim</span>
-                        {% else %}
-                            <span class="text-warning">✗ Não</span>
-                        {% endif %}
-                    </p>
-                    {% else %}
-                    <p class="text-muted">Entrega ainda não realizada</p>
-                    {% endif %}
-                    
-                    {% if entrega.observacoes_entrega %}
-                    <p><strong>Observações:</strong> {{ entrega.observacoes_entrega }}</p>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function updateStatus(newStatus) {
-    if (confirm('Tem certeza que deseja alterar o status desta encomenda?')) {
-        fetch(`/api/encomenda/{{ encomenda.pk }}/status/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: `status=${newStatus}`
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Erro ao atualizar status: ' + (data.error || 'Erro desconhecido'));
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao atualizar status');
-        });
-    }
-}
-
-// Adicionar token CSRF para requisições AJAX
-document.addEventListener('DOMContentLoaded', function() {
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (!csrfToken) {
-        const meta = document.createElement('meta');
-        meta.name = 'csrf-token';
-        meta.content = '{{ csrf_token }}';
-        document.head.appendChild(meta);
-        
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'csrfmiddlewaretoken';
-        input.value = '{{ csrf_token }}';
-        document.body.appendChild(input);
-    }
-});
-</script>
 {% endblock %}

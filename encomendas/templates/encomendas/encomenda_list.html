@@ -19,6 +19,7 @@
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
+            {% csrf_token %}
             <div class="col-md-3">
                 <label class="form-label">Status</label>
                 <select name="status" class="form-control">
@@ -46,7 +47,7 @@
             <div class="col-md-4">
                 <label class="form-label">Buscar</label>
                 <input type="text" name="search" class="form-control" 
-                       placeholder="Número, cliente ou código..." 
+                       placeholder="Número, cliente, item ou código..." 
                        value="{{ current_search|default:'' }}">
             </div>
             
@@ -90,8 +91,8 @@
                             <th>Número</th>
                             <th>Cliente</th>
                             <th>Status</th>
+                            <th>Entrega</th>
                             <th>Data Criação</th>
-                            <th>Responsável</th>
                             <th>Valor Total</th>
                             <th>Ações</th>
                         </tr>
@@ -111,9 +112,37 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="status-badge status-{{ encomenda.status }}">
-                                    {{ encomenda.get_status_display }}
-                                </span>
+                                <div class="dropdown">
+                                    <button class="status-badge status-{{ encomenda.status }} dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        {{ encomenda.get_status_display }}
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        {% for status_code, status_name in status_choices %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="updateStatus(this, {{ encomenda.pk }}, '{{ status_code }}')">
+                                                {{ status_name }}
+                                            </a>
+                                        </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </td>
+                            <td>
+                                {% with entrega=encomenda.entrega.first %}
+                                    {% if entrega %}
+                                        {% if entrega.data_entrega_realizada %}
+                                            <span class="text-success" title="Entregue em {{ entrega.data_entrega_realizada|date:'d/m/Y' }}">
+                                                <i class="bi bi-check-circle-fill"></i> Concluída
+                                            </span>
+                                        {% else %}
+                                            <span class="text-info" title="Agendada para {{ entrega.data_entrega|date:'d/m/Y' }}">
+                                                <i class="bi bi-truck"></i> Agendada
+                                            </span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                {% endwith %}
                             </td>
                             <td>
                                 <div>
@@ -121,7 +150,6 @@
                                     <small class="text-muted">{{ encomenda.data_criacao|time:"H:i" }}</small>
                                 </div>
                             </td>
-                            <td>{{ encomenda.responsavel_criacao }}</td>
                             <td>
                                 <strong>R$ {{ encomenda.valor_total|floatformat:2 }}</strong>
                             </td>
@@ -135,34 +163,6 @@
                                        class="btn btn-outline-secondary" title="Editar">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <div class="dropdown">
-                                        <button class="btn btn-outline-info dropdown-toggle" 
-                                                type="button" data-bs-toggle="dropdown" title="Mais Ações">
-                                            <i class="bi bi-three-dots"></i>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            {% if not encomenda.entrega %}
-                                            <li>
-                                                <a class="dropdown-item" href="{% url 'entrega_create' encomenda.pk %}">
-                                                    <i class="bi bi-truck me-2"></i>Programar Entrega
-                                                </a>
-                                            </li>
-                                            {% else %}
-                                            <li>
-                                                <a class="dropdown-item" href="{% url 'entrega_edit' encomenda.entrega.pk %}">
-                                                    <i class="bi bi-truck me-2"></i>Editar Entrega
-                                                </a>
-                                            </li>
-                                            {% endif %}
-                                            <li><hr class="dropdown-divider"></li>
-                                            <li>
-                                                <a class="dropdown-item text-danger" 
-                                                   href="{% url 'encomenda_delete' encomenda.pk %}">
-                                                    <i class="bi bi-trash me-2"></i>Excluir
-                                                </a>
-                                            </li>
-                                        </ul>
-                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -189,7 +189,6 @@
                 </table>
             </div>
             
-            <!-- Paginação -->
             {% if page_obj.has_other_pages %}
             <div class="card-footer">
                 <nav aria-label="Navegação de páginas">
@@ -238,60 +237,38 @@
         {% endif %}
     </div>
 </div>
+{% endblock %}
 
-<!-- Estatísticas Rápidas -->
-<div class="row mt-4">
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <i class="bi bi-clipboard-data text-primary" style="font-size: 2rem;"></i>
-                <h5 class="mt-2">{{ page_obj.paginator.count }}</h5>
-                <p class="text-muted mb-0">Total</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <i class="bi bi-clock-history text-warning" style="font-size: 2rem;"></i>
-                <h5 class="mt-2">
-                    {% with pendentes=page_obj.object_list|length %}
-                        {% if current_status == 'criada' or current_status == 'cotacao' or current_status == 'aprovada' or current_status == 'em_andamento' %}
-                            {{ pendentes }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    {% endwith %}
-                </h5>
-                <p class="text-muted mb-0">Pendentes</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <i class="bi bi-check-circle text-success" style="font-size: 2rem;"></i>
-                <h5 class="mt-2">
-                    {% if current_status == 'entregue' %}
-                        {{ page_obj.object_list|length }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </h5>
-                <p class="text-muted mb-0">Entregues</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <i class="bi bi-currency-dollar text-info" style="font-size: 2rem;"></i>
-                <h5 class="mt-2">
-                    R$ {% widthratio page_obj.object_list|length 1 1000 %}K
-                </h5>
-                <p class="text-muted mb-0">Valor Aprox.</p>
-            </div>
-        </div>
-    </div>
-</div>
+{% block extra_js %}
+<script>
+function updateStatus(element, encomendaPk, newStatus) {
+    const dropdownButton = element.closest('.dropdown').querySelector('.dropdown-toggle');
+    const originalStatusClass = dropdownButton.className.match(/status-([a-z_]+)/)[0];
+
+    if (originalStatusClass === `status-${newStatus}`) return;
+
+    fetch(`/api/encomenda/${encomendaPk}/status/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: `status=${newStatus}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            dropdownButton.textContent = data.status;
+            dropdownButton.classList.remove(originalStatusClass);
+            dropdownButton.classList.add(`status-${newStatus}`);
+        } else {
+            alert('Erro ao atualizar status: ' + (data.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro de comunicação ao atualizar status.');
+    });
+}
+</script>
 {% endblock %}

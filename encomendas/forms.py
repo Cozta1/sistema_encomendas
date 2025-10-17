@@ -1,6 +1,17 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import Encomenda, Cliente, Produto, Fornecedor, ItemEncomenda, Entrega
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from .models import Encomenda, Cliente, Produto, Fornecedor, ItemEncomenda, Entrega, CustomUser
+
+class CustomUserCreationForm(UserCreationForm):
+    class Meta(UserCreationForm.Meta):
+        model = CustomUser
+        fields = ('username', 'nome_completo', 'cargo', 'identificacao')
+
+class CustomUserChangeForm(UserChangeForm):
+    class Meta:
+        model = CustomUser
+        fields = ('username', 'nome_completo', 'cargo', 'identificacao')
 
 
 class ClienteForm(forms.ModelForm):

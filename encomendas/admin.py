@@ -1,7 +1,31 @@
 from django.contrib import admin
-from .models import Cliente, Fornecedor, Produto, Encomenda, ItemEncomenda, Entrega
+from django.contrib.auth.admin import UserAdmin
+from .models import (
+    CustomUser, Cliente, Fornecedor, Produto, 
+    Encomenda, ItemEncomenda, Entrega
+)
+from .forms import CustomUserCreationForm, CustomUserChangeForm
+
+# --- Administração do Usuário Personalizado ---
+class CustomUserAdmin(UserAdmin):
+    add_form = CustomUserCreationForm
+    form = CustomUserChangeForm
+    model = CustomUser
+    list_display = ['username', 'nome_completo', 'cargo', 'identificacao', 'is_staff']
+    
+    # Adiciona os campos personalizados aos formulários de edição e criação no admin
+    fieldsets = UserAdmin.fieldsets + (
+        ('Informações Adicionais', {'fields': ('nome_completo', 'cargo', 'identificacao')}),
+    )
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        ('Informações Adicionais', {'fields': ('nome_completo', 'cargo', 'identificacao')}),
+    )
+
+# Registra o modelo de usuário personalizado
+admin.site.register(CustomUser, CustomUserAdmin)
 
 
+# --- Administração dos Modelos da Aplicação ---
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
     list_display = ['codigo', 'nome', 'bairro', 'telefone']
@@ -31,6 +55,7 @@ class ItemEncomendaInline(admin.TabularInline):
     extra = 1
     fields = ['produto', 'fornecedor', 'quantidade', 'preco_cotado', 'valor_total', 'observacoes']
     readonly_fields = ['valor_total']
+    autocomplete_fields = ['produto', 'fornecedor']
 
 
 class EntregaInline(admin.StackedInline):
@@ -51,6 +76,7 @@ class EncomendaAdmin(admin.ModelAdmin):
     ordering = ['-numero_encomenda']
     readonly_fields = ['numero_encomenda', 'data_criacao', 'valor_total']
     inlines = [ItemEncomendaInline, EntregaInline]
+    autocomplete_fields = ['cliente']
     
     fieldsets = (
         ('Informações Básicas', {
@@ -68,6 +94,7 @@ class ItemEncomendaAdmin(admin.ModelAdmin):
     list_filter = ['encomenda__status', 'produto__categoria']
     search_fields = ['encomenda__numero_encomenda', 'produto__nome', 'fornecedor__nome']
     readonly_fields = ['valor_total']
+    autocomplete_fields = ['encomenda', 'produto', 'fornecedor']
 
 
 @admin.register(Entrega)
@@ -76,6 +103,7 @@ class EntregaAdmin(admin.ModelAdmin):
     list_filter = ['data_entrega', 'data_entrega_realizada', 'responsavel_entrega']
     search_fields = ['encomenda__numero_encomenda', 'responsavel_entrega', 'entregue_por']
     readonly_fields = ['valor_restante']
+    autocomplete_fields = ['encomenda']
     
     fieldsets = (
         ('Informações da Encomenda', {
