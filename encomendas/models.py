@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from decimal import Decimal
+from django.conf import settings
 
 class CustomUser(AbstractUser):
     nome_completo = models.CharField(max_length=255, blank=True, verbose_name="Nome Completo")
@@ -13,6 +14,7 @@ class CustomUser(AbstractUser):
         return self.username
 
 class Cliente(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     nome = models.CharField(max_length=200, verbose_name="Nome do Cliente")
     codigo = models.CharField(max_length=50, unique=True, verbose_name="Código")
     endereco = models.TextField(verbose_name="Endereço")
@@ -32,6 +34,7 @@ class Cliente(models.Model):
 
 
 class Fornecedor(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     nome = models.CharField(max_length=200, verbose_name="Nome do Fornecedor")
     codigo = models.CharField(max_length=50, unique=True, verbose_name="Código")
     contato = models.CharField(max_length=200, blank=True, verbose_name="Contato")
@@ -50,6 +53,7 @@ class Fornecedor(models.Model):
 
 
 class Produto(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     nome = models.CharField(max_length=200, verbose_name="Nome do Produto")
     codigo = models.CharField(max_length=50, unique=True, verbose_name="Código")
     descricao = models.TextField(blank=True, verbose_name="Descrição")
@@ -83,6 +87,7 @@ class Encomenda(models.Model):
         ('cancelada', 'Cancelada'),
     ]
 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     numero_encomenda = models.AutoField(primary_key=True, verbose_name="Número da Encomenda")
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, verbose_name="Cliente")
     
